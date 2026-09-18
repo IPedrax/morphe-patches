@@ -611,6 +611,41 @@ general service outage nor isolate the patches as the cause. Phone playback,
 Connect, and content-dependent sharing checks remain open. No phone logout,
 uninstall, data reset, or network-setting change was used in this comparison.
 
+### Manager failure screens and stock recovery
+
+On September 18, 2026, the disposable Android 16 ARM64 emulator imported
+the published `dev.4` bundle through Manager's local-source update picker.
+Manager `1.31.1` listed all four patches. These tests used Patcher `1.14.0`
+with a 640 MB process limit; they did not change the Pixel installation.
+
+Manager's theme editor accepted `notacolor` as the primary background value.
+Applying the patches then opened **Patching failed**, with the message
+**Primary background color must be #RRGGBB or #AARRGGBB.** Closing diagnostics
+offered **Home** and **Error**, with no install action. Choosing
+**Enable recommended patches** afterward selected only clean sharing and
+removed the customized theme-option indicator.
+
+A disposable copy of the original base APK changed the settings marker
+`aboutPage` to `aboutPagg`, using the existing refusal-test fixture builder.
+Selecting that file through Manager and applying clean sharing failed with
+**Spotify settings ABI changed: Lp/xlt;. Use the verified Spotify 9.1.80.2221
+APK.** No install action was offered. This exercises controlled input drift,
+not another supported Spotify version. Neither failure fixture was installed.
+
+Android's visible app-info flow uninstalled the emulator's unauthenticated
+patched Spotify. ADB confirmed its removal, then installed the five original
+stock splits. Every installed APK checksum matched its original input.
+Launching Spotify displayed **Millions of songs. Free on Spotify.**,
+**Sign up free**, and **Log in**. The emulator is closed afterward. This
+proves recovery to the original app's welcome screen; ADB substituted for
+the stock installer, and no Play Store reinstall or stock login was tested.
+
+A subsequent single-commit push of `4062d13` to `dev` still produced no
+Actions run for that exact SHA. Actions remained enabled, workflows were
+active, and the commit contained no skip annotation. Other integrations
+created check suites for the SHA. The missing automatic trigger remains
+unresolved; successful manual runs do not close it.
+
 ## Runtime and release checklist
 
 Use the normal Manager entry point before claiming release readiness.
@@ -618,13 +653,14 @@ Use the normal Manager entry point before claiming release readiness.
 - [x] Build the Android bundle and run all unit tests.
 - [x] Inspect generated patch metadata and extension contents.
 - [x] Patch sharing, colors, and their combination against the stock fixture.
-- [ ] Check informative failures for unsupported inputs and invalid options.
+- [x] Check informative failures for unsupported inputs and invalid options.
 - [x] Install and launch the output in a disposable Android environment.
 - [x] Add the source in Manager and patch through its visible flow.
 - [ ] Test login, playback, queue, Connect, background playback, notifications.
 - [ ] Test sharing for tracks, albums, playlists, episodes, and timestamps.
 - [ ] Check Home, library, player, settings, and dialog colors.
-- [ ] Test source updates, same-key reinstall, cancellation, and stock recovery.
+- [x] Test source updates, same-key reinstall, and patch cancellation.
+- [x] Restore stock Spotify in the disposable emulator, with the ADB substitution above.
 - [ ] Verify a push starts CI and prerelease automation for the expected commit.
 
 The verified clean-sharing build is installed on the source phone. No stable

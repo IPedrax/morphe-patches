@@ -121,6 +121,13 @@ Install the resulting APK with the same Manager signing key to preserve app
 data. If Android reports a certificate conflict, stop and check the signing
 key before considering an uninstall.
 
+## Return to stock Spotify
+
+Uninstall the patched Spotify app, then reinstall the official Spotify app
+from Google Play and sign in again. Uninstalling removes local app data and
+downloaded music. Stock Spotify uses a different signing certificate, so it
+cannot replace a Manager-signed installation through a normal app update.
+
 ## Try a local build
 
 Build the bundle using the [development instructions](CONTRIBUTING.md), then
