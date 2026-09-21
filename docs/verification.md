@@ -827,3 +827,62 @@ Use the normal Manager entry point before claiming release readiness.
 
 The local clean-sharing and Premium-navigation build is installed on the source phone. No stable
 compatibility claim is made from installation or static verification alone.
+
+## Home and Browse brand-ad experiment, September 21, 2026
+
+The unpublished source adds **Hide Home and Browse ads** for Spotify
+`9.1.80.2221`, ARM64 version code `145767611`. Patch selection defaults off;
+when installed, the in-app switch defaults on. Restart guidance is visible.
+This filters only the identified Home image/video and Browse brand-ad
+sections. Audio ads, player display ads, pop-ups, upgrade prompts, and account
+flags are outside this patch.
+
+The host build uses Java 21, Android SDK 36, and Morphe Desktop 1.16.0 on
+macOS ARM64. Eight class snapshots guard three list consumers, two structure
+holders, two section models, and the native list interface. The filter copies
+only when it encounters an ad, keeps the original section objects and order,
+preserves unknown section kinds, and leaves protobuf storage unchanged.
+Disabled or unexpected models return the original list.
+
+The final source passes 65 extension tests, 49 patch/verifier tests, and the
+26 existing sharing-verifier cases. New tests cover the Home and Browse tags,
+empty/all-ad lists, unchanged input identity, mixed or null models, toggle
+persistence, and absence of the switch when the patch is not installed.
+Verifier mutations exercise the wrong argument, result, getter, filter,
+iterator, caller, missing/duplicate hooks, and capability mismatch. A private
+APK with an altered discriminator field is refused with no output APK.
+Android lint reports zero errors and seven extension warnings. The separate
+development app passes five tests and lint with zero errors and 13 warnings.
+
+All six patches apply together to the stock base APK with SHA-256
+`3dc0c561236d4dc01c17acc12dd219914fa2de61992a3d1428ff6ee677cd45ee`.
+The frozen local bundle has SHA-256
+`76cc74d662569ebd98e40abc5f12d7fbd4dd2cc11d2316ac0c38f0921e47830e`.
+The combined APK, signed with a local debug key only for artifact checking,
+has SHA-256
+`87357d2b1937a9b1be86fdfe5e2e8962255f92ed756398c10dd0d2e0798a357b`.
+It was not installed over the Manager-signed Spotify app.
+
+`verify-artifact.py --hide-brand-ads` passes alongside all existing feature
+flags and the default theme colors. It verifies the three exact caller and
+list-getter hooks, input/output registers, downstream iterator calls,
+capability, compiled helper against the bundle, and unchanged native model
+classes. Existing sharing, settings, Premium navigation, manifest,
+permissions, 1,145 color resources, and signing checks also pass. The ad
+verifier accepts the previous Premium-tab APK with the ad patch unselected.
+
+On the Pixel 8 running Android 17, the normal **Spicetify Development**
+launcher opens the production settings screen. The new switch displays on by
+default, switches off, stays off after a process restart, and retains that
+value through a same-key development-app update. Turning it back on also
+persists after a process restart. The final screenshot shows the label,
+switch, and restart description without overlap. Development APK SHA-256:
+`5c15393d0b53704c301c8c0253051e8ded5a0b26b3fe5b1b536c49a595339c66`.
+
+The account owner confirmed Spotify Free. No actual brand-ad card appeared
+for an on/off comparison. The development app proves settings behavior only;
+it does not run Spotify's card renderers. Live removal, empty-space behavior,
+accessibility after removal, normal navigation with ads present, and playback
+remain unverified. The new patch stays optional and experimental, and no
+stable release is cleared by these checks. Spotify data and the installed
+Spotify APK were left untouched during this unit; the emulator stayed closed.

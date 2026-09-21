@@ -76,7 +76,15 @@ branch, installed capability, and compiled helper logic that preserves the
 original flag while negating the hide preference. Synthetic DEX tests reject
 misplaced or missing hooks, mismatched capabilities, and altered helper logic.
 The four-argument Java settings checker remains available for `dev.3` APKs;
-the Python checker expects the current extension's four capability methods.
+the Python checker expects capability methods for the selected features.
+
+Add `--hide-brand-ads` for **Hide Home and Browse ads**. Its checker verifies
+all three list consumers, getter placement, registers, and the native iterator
+calls. It also compares the native section/list model classes with the stock
+APK and the compiled filter with the selected bundle. Model drift must stop
+patching; `verify-failures.py --case changed-brand-ad-model` checks that refusal
+without modifying your stock APK. Runtime removal still needs a visible ad
+and an on/off comparison on a Free account.
 
 Check refusal paths against the same stock base APK and bundle:
 

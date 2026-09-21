@@ -119,15 +119,19 @@ below capture the requested advertising controls and personal media servers.
 
 1. Shorten the development loop. Use `scripts/device-check.py` for explicit
    device selection, certificate checks, same-key updates, installed hashes,
-   and repeatable album observations. Keep unit tests and synthetic server
-   tests independent of Spotify login. Next, measure the bundle-build and
-   patch stages, cache unchanged inputs by digest, and create a small debug
-   app for settings and server-provider work. The debug app cannot prove
-   Spotify hook compatibility. Manager still supplies release-flow evidence.
+   and repeatable album observations. The [development app](development-app.md)
+   now runs settings and server tests without rebuilding Spotify. Keep unit
+   tests and synthetic server tests independent of Spotify login. Next, measure
+   the bundle-build and patch stages and cache unchanged inputs by digest.
+   The debug app cannot prove Spotify hook compatibility. Manager still
+   supplies release-flow evidence.
 2. The optional **Hide Premium tab** patch is implemented and verified on the
    Pixel, including off/on behavior after restart; it is not yet published.
-   Add separate optional patches for **Hide upgrade
-   prompts**, and **Hide visual ads**. Give each an in-app switch, with
+   The optional **Hide Home and Browse ads** patch now filters identified
+   brand-ad sections, with artifact checks and development settings tests.
+   Live ad removal still needs an observed ad for an on/off comparison.
+   Add separate optional patches for **Hide upgrade prompts** and other
+   **Hide visual ads** targets. Give each an in-app switch, with
    explicit restart guidance where the native UI requires it. Identify exact
    containers and entry points in the supported APK before changing code.
    Test switches independently and together, including navigation, empty

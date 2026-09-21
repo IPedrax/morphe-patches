@@ -23,4 +23,8 @@ public final class InstalledPatches {
     public static boolean hidePremiumTab() {
         return false;
     }
+
+    public static boolean hideBrandAds() {
+        return false;
+    }
 }

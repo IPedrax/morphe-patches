@@ -108,6 +108,7 @@ def main():
     parser.add_argument("--home-pins", action="store_true")
     parser.add_argument("--server-files", action="store_true")
     parser.add_argument("--hide-premium-tab", action="store_true")
+    parser.add_argument("--hide-brand-ads", action="store_true")
     parser.add_argument("--theme", nargs=3, metavar=("BACKGROUND", "ACCENT", "PRESSED"))
     args = parser.parse_args()
     with zipfile.ZipFile(args.bundle) as bundle:
@@ -151,9 +152,9 @@ def main():
         args.java, "-Xmx2g", "-cp", str(args.desktop),
         str(Path(__file__).with_name("VerifySharingDex.java")),
         str(args.patched), "1" if args.sharing else "0",
-        "1" if args.sharing or args.theme or args.home_pins or args.server_files or args.hide_premium_tab else "0",
+        "1" if args.sharing or args.theme or args.home_pins or args.server_files or args.hide_premium_tab or args.hide_brand_ads else "0",
     ], check=True)
-    if args.sharing or args.theme or args.home_pins or args.server_files or args.hide_premium_tab:
+    if args.sharing or args.theme or args.home_pins or args.server_files or args.hide_premium_tab or args.hide_brand_ads:
         verify_manifest(args.aapt2, args.stock, args.patched, args.server_files)
         subprocess.run([
             args.java, "-Xmx2g", "-cp", str(args.desktop),
@@ -167,6 +168,11 @@ def main():
         str(Path(__file__).with_name("VerifyNavigationDex.java")),
         str(args.patched), "1" if args.hide_premium_tab else "0",
     ], check=True)
+    subprocess.run([
+        args.java, "-Xmx2g", "-cp", str(args.desktop),
+        str(Path(__file__).with_name("VerifyAdsDex.java")),
+        str(args.stock), str(args.patched), str(args.bundle), "1" if args.hide_brand_ads else "0",
+    ], check=True)
     subprocess.run([args.apksigner, "verify", str(args.patched)], check=True)
     print(json.dumps({
         "stockSha256": digest(args.stock), "patchedSha256": digest(args.patched),
@@ -174,7 +180,7 @@ def main():
         "defaultColorsChecked": len(before), "themeColorsChanged": len(expected),
         "sharing": args.sharing, "signatureVerified": True,
         "homePins": args.home_pins, "serverFiles": args.server_files,
-        "hidePremiumTab": args.hide_premium_tab,
+        "hidePremiumTab": args.hide_premium_tab, "hideBrandAds": args.hide_brand_ads,
     }, indent=2))
 
 

@@ -8,4 +8,5 @@ public final class InstalledPatches {
     public static boolean homePins() { return true; }
     public static boolean serverFiles() { return true; }
     public static boolean hidePremiumTab() { return true; }
+    public static boolean hideBrandAds() { return true; }
 }

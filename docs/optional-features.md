@@ -77,6 +77,26 @@ The patch targets the inspected Spotify `9.1.80.2221` navigation flag
 consumer and refuses changed navigation code. Runtime verification is tracked
 separately in [the verification record](verification.md).
 
+## Hide Home and Browse ads in local builds
+
+The current source also includes an optional **Hide Home and Browse ads**
+patch. It is experimental and has not been published. Select it when
+patching, then open **Settings and privacy > Spicetify**. The switch starts
+on. Restart Spotify after changing it.
+
+The patch filters the identified image and video brand-ad sections before
+Home and Browse build their card lists. It preserves ordinary sections and
+leaves the original protobuf lists unchanged. Turning the switch off returns
+the original lists. Unexpected models also return the original lists.
+Audio ads, player display ads, pop-ups, and upgrade reminders need separate
+patches.
+
+The patch targets Spotify `9.1.80.2221` and rejects changed models or callers.
+Static APK checks and development-app settings tests pass. An actual ad card
+has not yet been observed for an on/off comparison, so live ad removal and
+layout after removal remain unverified. See [advertising research](advertising-research.md)
+and [the verification record](verification.md).
+
 ## Verification
 
 The extension tests cover URL confinement, range responses, index scoping,

@@ -17,12 +17,13 @@ def altered_apk(source, target, kind):
     with zipfile.ZipFile(source) as original, zipfile.ZipFile(target, "w") as altered:
         for entry in original.infolist():
             data = original.read(entry)
-            if kind in ("sharing", "sharing-response", "settings", "home", "server", "navigation") and entry.filename.endswith(".dex"):
+            if kind in ("sharing", "sharing-response", "settings", "home", "server", "navigation", "ads") and entry.filename.endswith(".dex"):
                 old, new = {"sharing": (b"Invalid uri ", b"Invalid urj "),
                             "sharing-response": (b"fullUrl_", b"testUrl_"),
                             "settings": (b"aboutPage", b"aboutPagg"),
                             "home": (b"Lp/joz0;", b"Lp/jpz0;"),
                             "navigation": (b"premium_tab_enabled", b"premium_tab_enablex"),
+                            "ads": (b"featureTypeCase_", b"featureTypeTest_"),
                             "server": (b"Lcom/spotify/localfiles/mediastore/MediaStoreReader;",
                                        b"Lcom/spotify/localfiles/mediastore/MediaStoreReades;")}[kind]
                 count = data.count(old)
@@ -68,6 +69,8 @@ def main():
          "Spotify local-files ABI changed:"),
         ("changed-premium-navigation", "navigation", "Hide Premium tab", None,
          "Spotify navigation ABI changed:"),
+        ("changed-brand-ad-model", "ads", "Hide Home and Browse ads", None,
+         "Spotify advertising ABI changed:"),
     ]
     for key, label in (("backgroundColor", "Primary background color"),
                        ("accentColor", "Accent color"),

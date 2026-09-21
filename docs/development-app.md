@@ -7,8 +7,9 @@ the extension. You do not need Spotify APKs or GitHub Packages credentials.
 
 The app has its own preferences and server credentials. Its settings expose
 every installed-patch capability for development. Spotify navigation,
-sharing, Home pins, and the Spotify playback hook still require a patched
-Spotify build. A successful preview here does not prove Spotify integration.
+sharing, Home pins, ad filtering, and the Spotify playback hook still require
+a patched Spotify build. A successful preview here does not prove Spotify
+integration.
 
 ## Build and install
 

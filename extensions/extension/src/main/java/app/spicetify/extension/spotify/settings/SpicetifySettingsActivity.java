@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.CompoundButton;
 import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -49,20 +50,8 @@ public final class SpicetifySettingsActivity extends Activity {
         boolean sharingInstalled = InstalledPatches.cleanSharing();
         boolean themeInstalled = InstalledPatches.themeColors();
         if (sharingInstalled) {
-            Switch cleanSharing = new Switch(this);
-            cleanSharing.setText("Clean sharing links");
-            cleanSharing.setTextSize(18);
-            cleanSharing.setTextColor(Color.WHITE);
-            cleanSharing.setMinHeight(dp(56));
-            cleanSharing.setSwitchPadding(dp(24));
-            cleanSharing.setThumbTintList(new ColorStateList(
-                    new int[][] {new int[] {android.R.attr.state_checked}, new int[0]},
-                    new int[] {Color.rgb(30, 215, 96), Color.LTGRAY}));
-            cleanSharing.setChecked(PatchSettings.cleanSharingEnabled());
-            cleanSharing.setOnCheckedChangeListener((button, enabled) ->
-                    PatchSettings.setCleanSharingEnabled(enabled));
-            content.addView(cleanSharing, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            addSwitch(content, "Clean sharing links", PatchSettings.cleanSharingEnabled(),
+                    (button, enabled) -> PatchSettings.setCleanSharingEnabled(enabled));
             content.addView(text("Remove tracking parameters from Spotify links you share. "
                     + "Timestamps and playback context are preserved. Changes apply immediately.", false));
         }
@@ -76,22 +65,17 @@ public final class SpicetifySettingsActivity extends Activity {
         }
 
         if (InstalledPatches.hidePremiumTab()) {
-            Switch hidePremium = new Switch(this);
-            hidePremium.setText("Hide Premium tab");
-            hidePremium.setTextSize(18);
-            hidePremium.setTextColor(Color.WHITE);
-            hidePremium.setMinHeight(dp(56));
-            hidePremium.setSwitchPadding(dp(24));
-            hidePremium.setThumbTintList(new ColorStateList(
-                    new int[][] {new int[] {android.R.attr.state_checked}, new int[0]},
-                    new int[] {Color.rgb(30, 215, 96), Color.LTGRAY}));
-            hidePremium.setChecked(PatchSettings.hidePremiumTabEnabled());
-            hidePremium.setOnCheckedChangeListener((button, enabled) ->
-                    PatchSettings.setHidePremiumTabEnabled(enabled));
-            content.addView(hidePremium, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            addSwitch(content, "Hide Premium tab", PatchSettings.hidePremiumTabEnabled(),
+                    (button, enabled) -> PatchSettings.setHidePremiumTabEnabled(enabled));
             content.addView(text("Hide the Premium tab in navigation. Restart Spotify after changing this. "
                     + "Your subscription and other ads are unchanged.", false));
+        }
+
+        if (InstalledPatches.hideBrandAds()) {
+            addSwitch(content, "Hide Home and Browse ads", PatchSettings.hideBrandAdsEnabled(),
+                    (button, enabled) -> PatchSettings.setHideBrandAdsEnabled(enabled));
+            content.addView(text("Hide image and video brand-ad sections on Home and Browse. "
+                    + "Restart Spotify after changing this. Audio ads, player ads, and upgrade prompts are unchanged.", false));
         }
 
         if (InstalledPatches.homePins()) {
@@ -109,10 +93,27 @@ public final class SpicetifySettingsActivity extends Activity {
         }
 
         if (!sharingInstalled && !themeInstalled && !InstalledPatches.homePins()
-                && !InstalledPatches.serverFiles() && !InstalledPatches.hidePremiumTab()) {
+                && !InstalledPatches.serverFiles() && !InstalledPatches.hidePremiumTab() && !InstalledPatches.hideBrandAds()) {
             content.addView(text("No configurable Spicetify patches are installed.", false));
         }
         setContentView(scroll);
+    }
+
+    private void addSwitch(LinearLayout content, String label, boolean checked,
+            CompoundButton.OnCheckedChangeListener listener) {
+        Switch toggle = new Switch(this);
+        toggle.setText(label);
+        toggle.setTextSize(18);
+        toggle.setTextColor(Color.WHITE);
+        toggle.setMinHeight(dp(56));
+        toggle.setSwitchPadding(dp(24));
+        toggle.setThumbTintList(new ColorStateList(
+                new int[][] {new int[] {android.R.attr.state_checked}, new int[0]},
+                new int[] {Color.rgb(30, 215, 96), Color.LTGRAY}));
+        toggle.setChecked(checked);
+        toggle.setOnCheckedChangeListener(listener);
+        content.addView(toggle, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     private void chooseHomePins() {
