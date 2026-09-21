@@ -766,6 +766,48 @@ stays on throughout. Restarts used ADB force-stop followed by the normal
 launcher activity; no app data was cleared. This is navigation/settings
 evidence, not a new music-playback or ad-suppression pass.
 
+## Standalone development app
+
+On September 21, 2026, the separate `app.spicetify.development` debug app
+was built and installed on the Pixel 8 running Android 17. It compiles the
+production extension sources with development capability flags. The normal
+launcher opens the real settings Activity. A clean direct Java compile,
+unit tests, lint, and APK assembly passed; lint reported zero errors and 13
+warnings. The update installation took 1.12 seconds, excluding compilation
+and UI checks. This is a development app measurement, not a Spotify patching
+measurement.
+
+Five development-app tests pass, including player release and callback
+cancellation on stop, completion, and error, plus rejection of stale callbacks
+after starting another track. These use Robolectric's MediaPlayer shadow;
+production code has no test-only playback factory. The final incremental
+test/lint/assembly invocation took seven seconds with the APK tasks already
+up to date. It does not measure a full code-change rebuild.
+
+The first live pass exposed content overlapping the action bar. Applying
+window insets fixed the layout, confirmed by a fresh screenshot. The Premium
+preference persisted after force-stop and launcher restart, then was restored
+to its default. No Spotify installation or data was changed during this pass.
+
+An HTTPS tunnel served only a generated eight-second WAV tone using synthetic
+credentials. The visible settings flow scanned one track. Preview playback
+used the production private provider: screenshots show 0/8 seconds before a
+five-second seek and 6/8 afterward, followed by **Finished**. Explicit stop
+showed **Stopped** and disabled seeking. Opening settings during playback and
+returning also showed **Stopped**. These are player/UI and server-read checks;
+audible output was not independently confirmed during this pass.
+
+A fixture that ignored Range requests produced the expected **Scan failed**
+message and an empty track list. Restoring the valid folder and scanning again
+recovered the one-track index. This development pass does not establish
+Spotify's playback hook, queue, background audio, notifications, catalog
+behavior, or ad suppression. The emulator remained closed.
+
+The visible **Forget server** flow cleared the synthetic credentials and
+tracks. The test server and temporary public tunnel were stopped, and both
+processes were confirmed absent. The development app remains installed with
+server access disabled.
+
 ## Runtime and release checklist
 
 Use the normal Manager entry point before claiming release readiness.

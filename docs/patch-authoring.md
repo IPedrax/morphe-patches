@@ -52,6 +52,11 @@ the repository. Follow this sequence for each new patch:
    Record source, artifact, device, and observed results separately in
    [the verification record](verification.md).
 
+For settings layouts, preferences, server indexing, and file reads, use the
+[standalone development app](development-app.md) between full patch builds.
+It compiles the production extension sources and keeps its data separate
+from Spotify. Actual Spotify hooks still need the full sequence above.
+
 For a concrete example, read
 [SharingLinksPatch.kt](../patches/src/main/kotlin/app/spicetify/patches/spotify/privacy/SharingLinksPatch.kt)
 alongside

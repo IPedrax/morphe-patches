@@ -5,6 +5,10 @@ tests without Spotify binaries, account data, signing keys, or access tokens.
 For authoring and porting guidance, read
 [Writing Spotify patches](docs/patch-authoring.md).
 
+For settings and server changes, use the
+[standalone development app](docs/development-app.md) to test the shared
+extension code without rebuilding Spotify or downloading Morphe packages.
+
 ## Build and test
 
 Use Java 21 and an Android SDK. Set `JAVA_HOME` and `ANDROID_HOME` to their
