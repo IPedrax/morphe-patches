@@ -23,6 +23,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew :extensions:extension:testDebugUnitTest :extensions:extension:lintDebug :patches:test buildAndroid --no-daemon
+      - name: Test device check safeguards
+        run: python3 scripts/test-device-check.py
       - uses: actions/upload-artifact@v4
         with:
           name: patches

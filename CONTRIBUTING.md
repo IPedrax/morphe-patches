@@ -2,6 +2,8 @@
 
 Keep changes focused on Spotify Android customizations. Submit source and
 tests without Spotify binaries, account data, signing keys, or access tokens.
+For authoring and porting guidance, read
+[Writing Spotify patches](docs/patch-authoring.md).
 
 ## Build and test
 
@@ -107,6 +109,53 @@ Connect, background playback, and notifications still work.
 
 When importing code, record its source revision, license, retained notices,
 and local changes in [third-party sources](THIRD_PARTY_NOTICES.md).
+
+## Repeat a device check
+
+After verifying an APK with `verify-artifact.py`, use the device checker to
+compare or install that exact signed APK. Export Manager-built APKs first.
+Use Python 3.9 or later, Java 21, Android build tools, and an unlocked device
+with USB debugging authorized. Supply the device serial explicitly:
+
+```sh
+python3 scripts/device-check.py \
+  --serial YOUR_DEVICE_SERIAL \
+  --apk /path/to/verified.apk \
+  --sha256 VERIFIED_APK_SHA256 \
+  --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2" \
+  --apksigner "$ANDROID_HOME/build-tools/36.0.0/apksigner" \
+  --adb "$ANDROID_HOME/platform-tools/adb" \
+  --report /tmp/morphe-device-check.json
+```
+
+The default command checks the candidate's digest, package, version, and
+signature, then compares it with the installed Spotify APK. It does not
+install anything. It requires an existing single-APK installation with the
+same signing certificate. Split installations and certificate mismatches
+stop the command without uninstalling Spotify or clearing its data.
+
+Add `--install` to update Spotify with `adb install -r`. If the exact APK is
+already installed, the command skips installation. Afterward it compares the
+installed bytes with the candidate. Android may require confirmation on the
+device. No signing key is read or exported. On failure, inspect the report
+and device before retrying; the command does not roll back automatically.
+
+Add `--album-id 1oLxSFO8bJwsU2OmZY4cdU` to open a public album and record a
+fresh UI observation. This requires the candidate to be installed. The report
+contains hashes, timings, and an error classification without raw UI text or
+account information. `status: passed` means the checking procedure completed;
+read `albumObservation` separately. Visible Spotify UI never proves audible
+playback, and `playbackVerified` remains false. The English error classifier
+does not recognize translated messages or errors that arrive after its sample.
+
+Run the command's safeguards without a device:
+
+```sh
+python3 scripts/test-device-check.py
+```
+
+This shortcut accelerates repeated comparisons. It does not replace artifact
+verification, a normal Manager installation pass, or listening to playback.
 
 ## Release
 
