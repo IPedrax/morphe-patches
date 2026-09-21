@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import subprocess
+import zipfile
 from pathlib import Path
 
 
@@ -106,8 +107,17 @@ def main():
     parser.add_argument("--sharing", action="store_true")
     parser.add_argument("--home-pins", action="store_true")
     parser.add_argument("--server-files", action="store_true")
+    parser.add_argument("--hide-premium-tab", action="store_true")
     parser.add_argument("--theme", nargs=3, metavar=("BACKGROUND", "ACCENT", "PRESSED"))
     args = parser.parse_args()
+    with zipfile.ZipFile(args.bundle) as bundle:
+        try:
+            patch_dex = bundle.getinfo("classes.dex")
+        except KeyError:
+            raise AssertionError("Bundle lacks Android patch code. Run buildAndroid after the last Gradle test/build task.") from None
+        with bundle.open(patch_dex) as dex:
+            if not dex.read(8).startswith(b"dex\n"):
+                raise AssertionError("Bundle has an invalid Android patch DEX header")
     before = colors(args.aapt2, args.stock)
     after = colors(args.aapt2, args.patched)
     expected = {}
@@ -141,9 +151,9 @@ def main():
         args.java, "-Xmx2g", "-cp", str(args.desktop),
         str(Path(__file__).with_name("VerifySharingDex.java")),
         str(args.patched), "1" if args.sharing else "0",
-        "1" if args.sharing or args.theme or args.home_pins or args.server_files else "0",
+        "1" if args.sharing or args.theme or args.home_pins or args.server_files or args.hide_premium_tab else "0",
     ], check=True)
-    if args.sharing or args.theme or args.home_pins or args.server_files:
+    if args.sharing or args.theme or args.home_pins or args.server_files or args.hide_premium_tab:
         verify_manifest(args.aapt2, args.stock, args.patched, args.server_files)
         subprocess.run([
             args.java, "-Xmx2g", "-cp", str(args.desktop),
@@ -152,6 +162,11 @@ def main():
             str(args.bundle),
             "1" if args.home_pins else "0", "1" if args.server_files else "0",
         ], check=True)
+    subprocess.run([
+        args.java, "-Xmx2g", "-cp", str(args.desktop),
+        str(Path(__file__).with_name("VerifyNavigationDex.java")),
+        str(args.patched), "1" if args.hide_premium_tab else "0",
+    ], check=True)
     subprocess.run([args.apksigner, "verify", str(args.patched)], check=True)
     print(json.dumps({
         "stockSha256": digest(args.stock), "patchedSha256": digest(args.patched),
@@ -159,6 +174,7 @@ def main():
         "defaultColorsChecked": len(before), "themeColorsChanged": len(expected),
         "sharing": args.sharing, "signatureVerified": True,
         "homePins": args.home_pins, "serverFiles": args.server_files,
+        "hidePremiumTab": args.hide_premium_tab,
     }, indent=2))
 
 

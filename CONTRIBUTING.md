@@ -24,6 +24,11 @@ The bundle is `patches/build/libs/patches-*.mpp`. You can also supply `gpr.user`
 and `gpr.key` in your user-level `~/.gradle/gradle.properties`. Never put
 credentials in this repository's `gradle.properties`.
 
+Run `buildAndroid` after the last separate Gradle test or build invocation
+before copying a bundle to Manager. A later `:patches:jar` task can replace
+the `.mpp` with a JVM archive that Desktop loads but Manager cannot use.
+The artifact verifier rejects bundles without the root `classes.dex` entry.
+
 ## Verify a patch
 
 Unit tests cover URL cleanup and resource editing. They do not prove that a
@@ -61,6 +66,11 @@ It does not execute Spotify or cover every resource configuration.
 For builds with optional features, add `--home-pins` and/or
 `--server-files` to match the selected patches. The checker validates their
 capability flags and the server provider's private manifest declaration.
+Add `--hide-premium-tab` for the navigation patch. Its checker verifies the
+original flag consumer, argument and result register, following conditional
+branch, installed capability, and compiled helper logic that preserves the
+original flag while negating the hide preference. Synthetic DEX tests reject
+misplaced or missing hooks, mismatched capabilities, and altered helper logic.
 The four-argument Java settings checker remains available for `dev.3` APKs;
 the Python checker expects the current extension's four capability methods.
 

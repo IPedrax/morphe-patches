@@ -124,7 +124,9 @@ below capture the requested advertising controls and personal media servers.
    patch stages, cache unchanged inputs by digest, and create a small debug
    app for settings and server-provider work. The debug app cannot prove
    Spotify hook compatibility. Manager still supplies release-flow evidence.
-2. Add separate optional patches for **Hide Premium tab**, **Hide upgrade
+2. The optional **Hide Premium tab** patch is implemented and verified on the
+   Pixel, including off/on behavior after restart; it is not yet published.
+   Add separate optional patches for **Hide upgrade
    prompts**, and **Hide visual ads**. Give each an in-app switch, with
    explicit restart guidance where the native UI requires it. Identify exact
    containers and entry points in the supported APK before changing code.

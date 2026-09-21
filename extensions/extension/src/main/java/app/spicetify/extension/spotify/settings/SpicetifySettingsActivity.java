@@ -75,6 +75,25 @@ public final class SpicetifySettingsActivity extends Activity {
                     + "Change those options and repatch Spotify to use different colors.", false));
         }
 
+        if (InstalledPatches.hidePremiumTab()) {
+            Switch hidePremium = new Switch(this);
+            hidePremium.setText("Hide Premium tab");
+            hidePremium.setTextSize(18);
+            hidePremium.setTextColor(Color.WHITE);
+            hidePremium.setMinHeight(dp(56));
+            hidePremium.setSwitchPadding(dp(24));
+            hidePremium.setThumbTintList(new ColorStateList(
+                    new int[][] {new int[] {android.R.attr.state_checked}, new int[0]},
+                    new int[] {Color.rgb(30, 215, 96), Color.LTGRAY}));
+            hidePremium.setChecked(PatchSettings.hidePremiumTabEnabled());
+            hidePremium.setOnCheckedChangeListener((button, enabled) ->
+                    PatchSettings.setHidePremiumTabEnabled(enabled));
+            content.addView(hidePremium, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            content.addView(text("Hide the Premium tab in navigation. Restart Spotify after changing this. "
+                    + "Your subscription and other ads are unchanged.", false));
+        }
+
         if (InstalledPatches.homePins()) {
             content.addView(text("Home shortcuts", true));
             content.addView(text("Choose which shortcuts appear first when Spotify includes them on Home. "
@@ -90,7 +109,7 @@ public final class SpicetifySettingsActivity extends Activity {
         }
 
         if (!sharingInstalled && !themeInstalled && !InstalledPatches.homePins()
-                && !InstalledPatches.serverFiles()) {
+                && !InstalledPatches.serverFiles() && !InstalledPatches.hidePremiumTab()) {
             content.addView(text("No configurable Spicetify patches are installed.", false));
         }
         setContentView(scroll);

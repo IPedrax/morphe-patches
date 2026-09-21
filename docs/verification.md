@@ -710,6 +710,62 @@ saved build entry can still describe a diagnostic build; the installed-byte
 check establishes which APK is actually installed. The emulator remains
 closed. Tailscale remains disconnected as requested.
 
+## Local Premium navigation patch
+
+The unpublished source adds an optional **Hide Premium tab** patch for
+Spotify `9.1.80.2221`. Before patching, the Pixel shows five navigation tabs:
+Home, Search, Your Library, Premium, and Create. The patch changes only the
+consumer of the `premium_tab_enabled` flag; it does not change account tier.
+Five inspected navigation classes must match their stored ABI snapshots.
+
+The reviewed Android bundle has SHA-256
+`1a96497621575e15f49ad7890e80ec32f07ee77544b2cee862525c7c957a950f`.
+The extension suite passes 59 tests and the patch suite passes 45 tests,
+including 11 navigation-verifier fixtures. The existing 26 sharing-verifier
+regression cases and Android lint pass. The navigation checker verifies the
+original flag, hook location, argument and result registers, following branch,
+capability, and compiled helper's `original && !hidePreference` behavior.
+It rejects altered helper arguments, branch conditions, targets, and values.
+
+Desktop patching of the two-patch sharing/navigation profile and the full
+five-patch profile passed independent artifact checks before the final
+settings-row width adjustment. Both are base-only inspection APKs and were
+not installed. A fixture with the navigation marker changed fails with
+**Spotify navigation ABI changed**, exits 1, and produces no patched APK.
+
+A separate Gradle test invocation replaced the shared `.mpp` output with a
+JVM-only archive. Desktop could load it, but Manager showed zero patches.
+Rebuilding with `buildAndroid` restored the root `classes.dex` and Manager
+listed all five patches. The artifact checker now rejects missing or invalid
+Android patch DEX entries before inspecting an APK. Contributor instructions
+require regenerating the Android bundle after separate test/build tasks.
+
+Morphe Manager 1.31.1 on the Pixel built the reviewed bundle using its saved
+original APK, Fast bytecode mode, and a 1024 MB process limit. Only **Clean
+sharing links** and **Hide Premium tab** were selected. The exported APK has
+SHA-256 `62401539844939c1b3a36fe91ff4663ce687ca855dd7d46ee11a568a14d803c1`.
+Independent checks pass for the sharing hooks, native settings bridge,
+navigation hook and helper, manifest permissions, all 1,145 unchanged default
+colors, and APK signature.
+
+The same-key update retained the signed-in session. The device checker
+confirmed the installed bytes exactly match the export and use the existing
+Manager certificate. Installation took 12.13 seconds; the complete candidate,
+certificate, update, and installed-byte check took 15.91 seconds. This excludes
+bundle compilation, Manager patching, export, and UI checks. ADB `install -r`
+substituted for Manager's installer in this pass.
+
+With the new patch enabled, the Pixel shows four evenly spaced tabs: Home,
+Search, Your Library, and Create. A screenshot confirms no empty Premium slot.
+Search, Your Library, and Home can be opened. The normal **Settings and
+privacy > Spicetify** entry shows both installed switches at the same width.
+Turning **Hide Premium tab** off and restarting restores all five original
+tabs, including Premium. Reopening settings confirms the off value persisted.
+Turning it back on and restarting restores the four-tab layout. Clean sharing
+stays on throughout. Restarts used ADB force-stop followed by the normal
+launcher activity; no app data was cleared. This is navigation/settings
+evidence, not a new music-playback or ad-suppression pass.
+
 ## Runtime and release checklist
 
 Use the normal Manager entry point before claiming release readiness.
@@ -727,5 +783,5 @@ Use the normal Manager entry point before claiming release readiness.
 - [x] Restore stock Spotify in the disposable emulator, with the ADB substitution above.
 - [ ] Verify a push starts CI and prerelease automation for the expected commit.
 
-The verified clean-sharing build is installed on the source phone. No stable
+The local clean-sharing and Premium-navigation build is installed on the source phone. No stable
 compatibility claim is made from installation or static verification alone.

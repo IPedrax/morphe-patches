@@ -61,6 +61,22 @@ configuration cannot publish into a new one. Audio is streamed through
 Android's file-descriptor API without a persistent audio cache. The app scans
 again after starting; this feature does not provide offline downloads.
 
+## Hide the Premium tab in local builds
+
+The current source includes an optional **Hide Premium tab** patch. It is
+not included in the published `dev.4` bundle. Build the source and select
+this patch when testing it locally.
+
+Open Spotify's **Settings and privacy > Spicetify** and change **Hide Premium
+tab**. Close and restart Spotify to refresh navigation. The installed patch
+hides the tab by default; turning the switch off restores Spotify's own
+decision about whether to show it. The switch does not change your
+subscription, suppress audio or visual ads, or hide other upgrade prompts.
+
+The patch targets the inspected Spotify `9.1.80.2221` navigation flag
+consumer and refuses changed navigation code. Runtime verification is tracked
+separately in [the verification record](verification.md).
+
 ## Verification
 
 The extension tests cover URL confinement, range responses, index scoping,

@@ -16,9 +16,14 @@ experimental source.
 
 ## Patches
 
-The bundle contains four patches. Clean sharing is enabled by default;
-colors, Home shortcut pinning, and HTTPS WebDAV server files are optional.
+The published `dev.4` bundle contains four patches. Clean sharing is enabled
+by default; colors, Home shortcut pinning, and HTTPS WebDAV server files are
+optional.
 See [optional feature setup and limits](docs/optional-features.md).
+
+The current source also includes an optional **Hide Premium tab** patch for
+local testing. It is not yet published. See
+[local navigation testing](docs/optional-features.md#hide-the-premium-tab-in-local-builds).
 
 | Patch | Default | Behavior |
 | --- | --- | --- |

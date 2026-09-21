@@ -56,4 +56,26 @@ public class PatchSettingsTest {
         assertEquals(null, SharingLinks.onShareUrl(null));
         assertEquals("not a URL", SharingLinks.onShareUrl("not a URL"));
     }
+
+    @Test
+    public void premiumTabIsHiddenByDefaultAndNeverEnablesAnAbsentTab() {
+        assertTrue(PatchSettings.hidePremiumTabEnabled());
+        assertFalse(PatchSettings.showPremiumTab(true));
+        assertFalse(PatchSettings.showPremiumTab(false));
+        PatchSettings.setHidePremiumTabEnabled(false);
+        assertTrue(PatchSettings.showPremiumTab(true));
+        assertFalse(PatchSettings.showPremiumTab(false));
+    }
+
+    @Test
+    public void premiumTabChoiceSurvivesInitializationAndIsIndependentOfSharing() {
+        PatchSettings.setHidePremiumTabEnabled(false);
+        PatchSettings.initialize(application);
+        assertFalse(PatchSettings.hidePremiumTabEnabled());
+        assertTrue(PatchSettings.cleanSharingEnabled());
+        PatchSettings.setCleanSharingEnabled(false);
+        PatchSettings.setHidePremiumTabEnabled(true);
+        assertFalse(PatchSettings.cleanSharingEnabled());
+        assertFalse(PatchSettings.showPremiumTab(true));
+    }
 }
