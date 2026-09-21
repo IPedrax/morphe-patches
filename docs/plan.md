@@ -110,6 +110,58 @@ current server acceptance. I would keep those out of the first milestone and
 make customization the initial project promise.
 [Historical implementation](https://github.com/anddea/revanced-patches/blob/3174510163d9787571bd93275b54932b575f82ed/patches/src/main/kotlin/app/revanced/patches/spotify/misc/UnlockPremiumPatch.kt).
 
+## Next milestones after dev.4
+
+The next work expands beyond the original customization milestone. Settings,
+Home pinning, and WebDAV playback now exist; their evidence and remaining
+checks are in [the verification record](verification.md). The priorities
+below capture the requested advertising controls and personal media servers.
+
+1. Shorten the development loop. Use `scripts/device-check.py` for explicit
+   device selection, certificate checks, same-key updates, installed hashes,
+   and repeatable album observations. Keep unit tests and synthetic server
+   tests independent of Spotify login. Next, measure the bundle-build and
+   patch stages, cache unchanged inputs by digest, and create a small debug
+   app for settings and server-provider work. The debug app cannot prove
+   Spotify hook compatibility. Manager still supplies release-flow evidence.
+2. Add separate optional patches for **Hide Premium tab**, **Hide upgrade
+   prompts**, and **Hide visual ads**. Give each an in-app switch, with
+   explicit restart guidance where the native UI requires it. Identify exact
+   containers and entry points in the supported APK before changing code.
+   Test switches independently and together, including navigation, empty
+   spaces, accessibility, and returning to stock behavior when disabled.
+3. Investigate **Suppress audio ads** independently. Establish ordinary music
+   playback on a Free account, observe actual ad transitions, and then compare
+   the patch on and off. Verify the following song starts, queue progression,
+   seeking where available, background playback, and reconnecting. Silence
+   alone is not success. Do not bundle account-tier spoofing into visual
+   cleanup or claim server-side Premium features from local flags.
+4. Add Jellyfin as the first additional personal-library provider. Start with
+   server sign-in, library selection, paginated audio indexing, metadata,
+   direct streaming, seeking, cancellation, and reconnecting. Use stable
+   provider/item identities instead of token-bearing URLs as track IDs.
+   Reuse the Local Files hook and private streaming provider; separate catalog
+   discovery and authenticated byte reads from WebDAV-specific code.
+5. Add Plex with the same provider contract once Jellyfin establishes the
+   needed operations. Include account authorization, server and music-library
+   selection, expired-session handling, and server-specific credentials.
+   Test each provider against a real server as well as deterministic fixtures.
+
+Jellyfin supports password authentication and Quick Connect, both yielding
+access tokens. Prefer Quick Connect when available, with sign-in as fallback.
+See the [official authentication guide](https://kotlin-sdk.jellyfin.org/guide/authentication.html).
+Plex documents token authentication and PIN authorization in its
+[server API reference](https://developer.plex.tv/pms/). These integrations are
+planned, not implemented. Transcoding, offline downloads, and playlist sync
+need separate design and tests after direct audio playback works.
+
+The live `cvnfork/morphe-spotify-patches` main tree inspected on September 21,
+2026 contains settings, Home pins, and WebDAV code, but no advertising patch.
+Historical Premium implementations remain research leads, not validated
+current ad blockers. The phone's catalog failure also occurs in repackaged
+no-op controls. Keep that diagnosis separate from new feature toggles; audio
+ad acceptance remains blocked until the playback baseline works.
+
 ## Build and release approach
 
 Use the template at `f99b2938bd25b202a6185a774d487a07d1061915`, dated

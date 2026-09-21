@@ -646,6 +646,70 @@ active, and the commit contained no skip annotation. Other integrations
 created check suites for the SHA. The missing automatic trigger remains
 unresolved; successful manual runs do not close it.
 
+### Phone catalog isolation and album sharing
+
+The same album failure persists after disconnecting the phone's VPN and
+restarting Spotify. Android's VPN screen shows no connected VPN, and a
+current-network check confirms no VPN transport. The phone still has a
+validated Internet connection. Available Spotify process logs contain no
+HTTP status or exception that establishes the cause.
+
+On the default `dev.4` APK, album sharing reaches Android's share preview
+even while artwork and track loading fail. With **Clean sharing links** on,
+the outgoing URL is the correct `open.spotify.com/album/` URL with no query
+parameters. Turning it off preserves `si` and `utm_source`. Both cases use
+the same album ID. No recipient was selected. The album-loading failure
+persists with cleanup off; cleanup was restored to on afterward. This
+verifies the outgoing album intent, not clipboard access, successful target
+loading on the phone, or sharing other content types.
+
+A private no-op bundle, built separately from source `8616490`, declares
+the same experimental target and executes no patch changes. Its SHA-256 is
+`b786244703d69747ae4dca002c3bc811fab1f4dbd2177d38d6f19212f169bc1d`.
+Manager built two controls from its original input with only that source
+selected, using a 1024 MB process limit:
+
+| Manager bytecode mode | Exported and installed APK SHA-256 | Album result |
+| --- | --- | --- |
+| Fast | `21cf23773e2915f9256823b964fe0049092600ba8c7baa5f62fd1ff60896faa1` | Tracks unavailable |
+| Full | `3f8b9269ffaa0aecae80caccde7b9a4298647dcec0b6c318a0cf31539dbb122a` | Tracks unavailable |
+
+Independent checks find no Spicetify DEX descriptors, manifest components,
+sharing hooks, sanitizers, or preference wrappers in either control. Both
+retain the original permissions and all 1,145 checked default colors, pass
+signature verification, and use the existing Manager certificate. Each
+installed checksum matches its export. Same-key ADB updates preserve the
+signed-in session. These are repackaged controls, not stock-signed APKs;
+Morphe still processes their bytecode. They were not published.
+
+The failure therefore occurs with the patch code absent and in both tested
+bytecode modes. This does not rule out retained app state, the common APK
+merging/signing path, or Spotify's handling of the mobile session. Its root
+cause remains open, and no production-code workaround was made from these
+observations.
+
+### Repeatable device check and cleanup
+
+The Pixel is restored to the default public `dev.4` APK. The new
+`scripts/device-check.py` independently confirms its installed SHA-256
+`e509751fdb2239706449f2bd9d3682e67193fb453cfa6a0144ee4fdb536ea27a`
+and the existing Manager certificate on Android 17. Candidate inspection,
+installed-byte comparison, and the album observation completed in 10.32
+seconds. The album still reports tracks unavailable. This run did not need
+an installation and does not measure build or patch time.
+The final helper also passed its `--install` path with the same APK in 12.62
+seconds, correctly skipping the redundant install. Ten automated tests cover
+certificate and digest refusal, split-install refusal, update verification,
+and the distinction between visible UI and playback. Updating to different
+bytes with this helper remains covered by a simulated ADB test, not a live
+installation in this pass.
+
+Manager lists the public `dev.4` source enabled and the old local `dev.3`
+source disabled. The temporary diagnostic source is absent. Its previously
+saved build entry can still describe a diagnostic build; the installed-byte
+check establishes which APK is actually installed. The emulator remains
+closed. Tailscale remains disconnected as requested.
+
 ## Runtime and release checklist
 
 Use the normal Manager entry point before claiming release readiness.
