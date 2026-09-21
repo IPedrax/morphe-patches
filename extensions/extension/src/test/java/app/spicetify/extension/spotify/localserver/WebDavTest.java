@@ -202,6 +202,10 @@ public class WebDavTest {
             assertFalse("Cancelled reader did not stop", reader.isAlive());
         }
     }
+    @Test public void existingWebDavIdentityIsStable() {
+        ServerConnection fixed = new ServerConnection("https://dav.example/music/", "listener", "password");
+        assertEquals("69c9982e3b9b594ac959b1dbe52ea983e51813b0859fcdd6b134f6214d4f9be1", new RemoteTrack(fixed, fixed.root.resolve("song.mp3"), 1024, null).id);
+    }
     @Test public void oldHashCollisionProducesDifferentTrackIds() {
         RemoteTrack a = new RemoteTrack(config, config.root.resolve("Aa/song.mp3"), 1024, null);
         RemoteTrack b = new RemoteTrack(config, config.root.resolve("BB/song.mp3"), 1024, null);

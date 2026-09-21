@@ -12,20 +12,23 @@ import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 
 /** Bounded WebDAV traversal and byte-exact reads; no persistent audio cache. */
-public final class WebDav {
+public final class WebDav implements ProviderSession {
     static final int MAX_LISTING_BYTES = 2 * 1024 * 1024;
     static final int MAX_TRACKS = 500;
     private static final int TIMEOUT = 10000;
-    private static final Pattern CONTENT_RANGE = Pattern.compile("bytes ([0-9]+)-([0-9]+)/([0-9]+)");
     private static final Pattern AUDIO_FILE = Pattern.compile(".*\\.(mp3|m4a|aac|flac|ogg|oga|opus|wav|mp4|m4b)$");
     private final ServerConnection config;
     private final BooleanSupplier active;
+    private final StrictRangeReader reader;
     private long deadline = Long.MAX_VALUE;
 
-    WebDav(ServerConnection config, BooleanSupplier active) { this.config = config; this.active = active; }
+    WebDav(ServerConnection config, BooleanSupplier active) {
+        this.config = config; this.active = active;
+        reader = new StrictRangeReader(config::resolve, config.authorization(), active, status -> {}, false);
+    }
     private void check() throws IOException { if (!active.getAsBoolean() || Thread.currentThread().isInterrupted() || System.nanoTime() > deadline) throw new IOException("Server access was cancelled."); }
 
-    List<RemoteTrack> scan() throws IOException {
+    @Override public List<RemoteTrack> scan() throws IOException {
         deadline = System.nanoTime() + 120_000_000_000L;
         List<RemoteTrack> tracks = new ArrayList<>();
         Set<String> trackIds = new HashSet<>();
@@ -205,53 +208,7 @@ public final class WebDav {
         throw new IOException("Response line is too long.");
     }
 
-    int read(RemoteTrack track, long offset, int size, byte[] data) throws IOException {
-        deadline = System.nanoTime() + 15_000_000_000L;
-        check();
-        if (offset < 0 || size < 0 || size > data.length) throw new IOException("Invalid read bounds.");
-        if (offset >= track.size || size == 0) return 0;
-        int wanted = (int) Math.min(Math.min(size, 256 * 1024), track.size - offset);
-        long end = offset + wanted - 1;
-        URI uri = config.resolve(config.root, track.url.toASCIIString());
-        for (int redirect = 0; redirect < 4; redirect++) {
-            check();
-            HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
-            try {
-                connection.setConnectTimeout(TIMEOUT); connection.setReadTimeout(TIMEOUT);
-                connection.setInstanceFollowRedirects(false);
-                connection.setRequestProperty("Accept-Encoding", "identity");
-                connection.setRequestProperty("Range", "bytes=" + offset + "-" + end);
-                String auth = config.authorization();
-                if (auth != null) connection.setRequestProperty("Authorization", auth);
-                if (track.etag != null && track.etag.startsWith("\"") && track.etag.endsWith("\"")) connection.setRequestProperty("If-Match", track.etag);
-                int status = connection.getResponseCode();
-                if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
-                    String location = connection.getHeaderField("Location");
-                    if (location == null) throw new IOException("The server sent a redirect without a location.");
-                    try { uri = config.resolve(uri, location); }
-                    catch (IllegalArgumentException ex) { throw new IOException("The server redirected outside the configured folder."); }
-                    continue;
-                }
-                if (status != 206) throw new IOException("The server must support byte range requests (HTTP 206).");
-                Matcher range = CONTENT_RANGE.matcher(String.valueOf(connection.getHeaderField("Content-Range")));
-                try {
-                    if (!range.matches() || Long.parseLong(range.group(1)) != offset || Long.parseLong(range.group(2)) != end
-                            || Long.parseLong(range.group(3)) != track.size) throw new IOException("The server returned an incorrect byte range.");
-                } catch (NumberFormatException ex) { throw new IOException("The server returned an invalid byte range."); }
-                String encoding = connection.getHeaderField("Content-Encoding");
-                if (encoding != null && !encoding.equalsIgnoreCase("identity")) throw new IOException("Compressed byte ranges are not supported.");
-                if (connection.getContentLengthLong() != -1 && connection.getContentLengthLong() != wanted) throw new IOException("The range length does not match.");
-                try (InputStream in = connection.getInputStream()) {
-                    int read = 0;
-                    while (read < wanted) {
-                        check(); int count = in.read(data, read, wanted - read);
-                        if (count < 0) throw new EOFException("Truncated audio range.");
-                        read += count;
-                    }
-                    check(); return read;
-                }
-            } finally { connection.disconnect(); }
-        }
-        throw new IOException("Too many redirects.");
+    @Override public int read(RemoteTrack track, long offset, int size, byte[] data) throws IOException {
+        return reader.read(track.url, track.size, track.etag, offset, size, data);
     }
 }

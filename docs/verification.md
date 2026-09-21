@@ -886,3 +886,51 @@ accessibility after removal, normal navigation with ads present, and playback
 remain unverified. The new patch stays optional and experimental, and no
 stable release is cleared by these checks. Spotify data and the installed
 Spotify APK were left untouched during this unit; the emulator stayed closed.
+
+## Jellyfin protocol foundation, September 21, 2026
+
+The source now has Jellyfin authentication, music-library discovery, paginated
+indexing, and authenticated range reads. Settings and saved configurations
+still use WebDAV. Jellyfin is not yet selectable in the Android app, and this
+unit does not establish Spotify playback or release readiness.
+
+Quick Connect was approved through an existing Jellyfin browser session. A
+temporary diagnostic session confirmed the current server's music views,
+media-source sizes, metadata, and original stream endpoint. Password sign-in,
+Quick Connect, malformed responses, expired authentication, pagination,
+unsupported sources, redirect confinement, and file-version checks have
+loopback fixture coverage. Access tokens stay in authorization headers and
+out of track IDs. The selected server, account, and library scope each session.
+
+The production Java protocol classes scanned a Jellyfin 12.1.0 library on
+macOS ARM64 using Java 21, with a 256 MiB heap ceiling. This diagnostic used a
+desktop JSON implementation; Android behavior remains a separate check. The
+scan visited all 35,274 items in 217 seconds, indexed 35,242 supported tracks,
+and reported 32 skipped sources or containers. Heap usage immediately after
+the scan was 99 MiB; this is neither peak usage nor an Android measurement.
+An earlier API probe measured a largest 500-item page of 1,426,740 bytes.
+
+The implementation caps catalogs at 50,000 items, response bodies at 4 MiB,
+and scanning at ten minutes. It reports progress and skipped tracks. Invalid
+or nonprogressing pages fail instead of publishing an incomplete catalog.
+Metadata comes from Jellyfin's API, avoiding a file probe for every song.
+
+The Java reader verified 32-byte reads at the start, middle, and end of one
+original stream. The server returned exact HTTP 206 ranges and Last-Modified
+headers, and rejected a stale If-Unmodified-Since value with HTTP 412. The
+reader learns the HTTP validator on the first read and pins it for subsequent
+reads. It does not prove that a same-size file remained unchanged between the
+catalog scan and that first read. Catalog versions remain part of track IDs.
+
+WebDAV and Jellyfin share the strict range reader. Existing WebDAV identity
+bytes are preserved by a golden regression test. After simplification, the
+source passed 79 extension tests, 49 patch tests, 26 sharing-verifier cases,
+and five development-app tests. Both the Android bundle and development APK
+built. Android lint reported zero errors, with seven extension warnings and
+13 development-app warnings.
+
+The temporary diagnostic session was logged out; a subsequent authenticated
+request returned HTTP 401, and its local credential file was deleted. No
+Spotify installation, account data, or playback was changed by these checks,
+and the emulator remained closed. Settings integration and a normal Android
+sign-in, full scan, playback, and seeking pass are the next verification step.
