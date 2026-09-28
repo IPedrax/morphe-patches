@@ -25,6 +25,10 @@ private val serverResourcesPatch = resourcePatch {
             provider.setAttributeNS(ANDROID, "android:exported", "false")
             provider.setAttributeNS(ANDROID, "android:grantUriPermissions", "false")
             manifest.getElementsByTagName("application").item(0).appendChild(provider)
+            val browser = manifest.createElement("activity")
+            browser.setAttributeNS(ANDROID, "android:name", "app.spicetify.extension.spotify.settings.ServerMusicActivity")
+            browser.setAttributeNS(ANDROID, "android:exported", "false")
+            manifest.getElementsByTagName("application").item(0).appendChild(browser)
         }
     }
 }

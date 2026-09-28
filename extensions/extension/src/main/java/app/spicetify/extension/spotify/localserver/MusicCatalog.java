@@ -86,6 +86,10 @@ public final class MusicCatalog {
     private final List<Track> tracks;
     private final Map<String, Album> albumsById;
     private final Map<String, Artist> artistsById;
+    private final Map<String, Track> tracksById;
+    private final List<String> albumSearch;
+    private final List<String> artistSearch;
+    private final List<String> trackSearch;
 
     private MusicCatalog(List<Album> albums, List<Artist> artists, List<Track> tracks) {
         this.albums = Collections.unmodifiableList(albums);
@@ -97,6 +101,15 @@ public final class MusicCatalog {
         Map<String, Artist> byArtist = new HashMap<>();
         for (Artist artist : artists) byArtist.put(artist.id, artist);
         artistsById = Collections.unmodifiableMap(byArtist);
+        Map<String, Track> byTrack = new HashMap<>();
+        for (Track track : tracks) byTrack.put(track.id, track);
+        tracksById = Collections.unmodifiableMap(byTrack);
+        albumSearch = new ArrayList<>(albums.size());
+        for (Album album : albums) albumSearch.add(folded(album.title) + "\n" + folded(album.artist));
+        artistSearch = new ArrayList<>(artists.size());
+        for (Artist artist : artists) artistSearch.add(folded(artist.name));
+        trackSearch = new ArrayList<>(tracks.size());
+        for (Track track : tracks) trackSearch.add(folded(track.title) + "\n" + folded(track.artist));
     }
 
     static MusicCatalog empty() {
@@ -180,6 +193,7 @@ public final class MusicCatalog {
     public int artistCount() { return artists.size(); }
     public Album album(String id) { return albumsById.get(id); }
     public Artist artist(String id) { return artistsById.get(id); }
+    public Track track(String id) { return tracksById.get(id); }
     public List<Album> albums(int offset, int limit) { return page(albums, offset, limit); }
     public List<Artist> artists(int offset, int limit) { return page(artists, offset, limit); }
     public List<Track> songs(int offset, int limit) { return page(tracks, offset, limit); }
@@ -191,14 +205,12 @@ public final class MusicCatalog {
         List<Artist> artistMatches = new ArrayList<>();
         List<Album> albumMatches = new ArrayList<>();
         List<Track> trackMatches = new ArrayList<>();
-        for (Artist artist : artists)
-            if (artistMatches.size() < limit && folded(artist.name).contains(needle)) artistMatches.add(artist);
-        for (Album album : albums)
-            if (albumMatches.size() < limit && (folded(album.title).contains(needle) || folded(album.artist).contains(needle)))
-                albumMatches.add(album);
-        for (Track track : tracks)
-            if (trackMatches.size() < limit && (folded(track.title).contains(needle) || folded(track.artist).contains(needle)))
-                trackMatches.add(track);
+        for (int i = 0; i < artists.size() && artistMatches.size() < limit; i++)
+            if (artistSearch.get(i).contains(needle)) artistMatches.add(artists.get(i));
+        for (int i = 0; i < albums.size() && albumMatches.size() < limit; i++)
+            if (albumSearch.get(i).contains(needle)) albumMatches.add(albums.get(i));
+        for (int i = 0; i < tracks.size() && trackMatches.size() < limit; i++)
+            if (trackSearch.get(i).contains(needle)) trackMatches.add(tracks.get(i));
         return new SearchResults(artistMatches, albumMatches, trackMatches);
     }
 

@@ -133,6 +133,8 @@ final class ServerFilesSettings extends LinearLayout {
         watch(jellyfinPassword);
         status = label(this, ServerIndex.status(), 14);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        Button browse = button(this, "Browse server music");
+        browse.setOnClickListener(view -> ServerMusicActivity.open(getContext()));
         providers.setOnCheckedChangeListener((group, checkedId) -> {
             cancelSignIn();
             validationError = null;
