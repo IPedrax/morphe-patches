@@ -128,6 +128,20 @@ the native model classes are unchanged. A changed model is rejected during
 patching. These static checks do not establish that the observed player
 overlay uses this mapper; live on/off comparison is still needed.
 
+## Other current ad surfaces
+
+The stock APK also has `DisplayAdActivity`, which installs a `VideoOverlay`
+fragment from an ad passed in its launch intent. This is a full-screen video
+surface, separate from the Home and Browse section lists and the Now Playing
+image-brand-ad mapper. Its presence does not identify the Search card that
+was previously visible on the Pixel.
+
+The Now Playing ads-mode model distinguishes vertical video, horizontal
+video, and audio formats. That model describes the ad UI; filtering it would
+not prove that Spotify skips an audio ad in the playback queue. Audio-ad
+suppression needs a traced playback boundary and a live Free-account test
+with normal music advancing across an ad break.
+
 ## Remaining inspection
 
 Inspect the private stock APK before designing a patch:
@@ -135,11 +149,9 @@ Inspect the private stock APK before designing a patch:
 1. Find the current context-menu view-model construction path and verify every
    candidate resource identifier and serialized marker. Record which actual
    upgrade reminder each candidate renders, then filter only that model.
-2. Find Home and Browse section holders with a `sections_` list and identify
-   their discriminant fields. Prove that any matching case number renders a
-   visible brand-ad card before removing it. Preserve list mutability and
-   renderer behavior; the historical code globally relaxes a protobuf
-   mutability guard, so that part is not a safe copy-forward.
+2. Compare the Home and Browse filters with a served card while the switches
+   are on and off. Check whether Search uses the Browse model or another
+   renderer, and whether removing a card also removes its layout space.
 3. Locate `FetchMessageRequest` and `FetchMessageListRequest` only if a
    repeatable popup is present. Trace each result to its displayed surface.
    Do not convert a request to an error merely because its class name matches.
