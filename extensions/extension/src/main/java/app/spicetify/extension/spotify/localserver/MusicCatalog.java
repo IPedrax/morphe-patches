@@ -119,11 +119,17 @@ public final class MusicCatalog {
     static MusicCatalog from(List<RemoteTrack> sources) {
         Map<String, AlbumBuilder> albumBuilders = new LinkedHashMap<>();
         Map<String, ArtistBuilder> artistBuilders = new LinkedHashMap<>();
+        Map<String, LinkedHashSet<String>> jellyfinAlbumIds = new HashMap<>();
+        for (RemoteTrack source : sources) {
+            if (source.providerIdentity != null && !source.browse.albumId.isEmpty())
+                jellyfinAlbumIds.computeIfAbsent(albumNameKey(source), ignored -> new LinkedHashSet<>())
+                        .add(source.browse.albumId);
+        }
         List<Track> tracks = new ArrayList<>(sources.size());
         for (RemoteTrack source : sources) {
             Track track = new Track(source);
             tracks.add(track);
-            String albumId = albumId(source);
+            String albumId = albumId(source, jellyfinAlbumIds);
             String albumTitle = source.album.isEmpty() ? "Unknown album" : source.album;
             String albumArtist = source.browse.albumArtist.isEmpty() ? source.artist : source.browse.albumArtist;
             AlbumBuilder album = albumBuilders.computeIfAbsent(albumId,
@@ -194,14 +200,23 @@ public final class MusicCatalog {
         return artists.computeIfAbsent(id, ignored -> new ArtistBuilder(id, name));
     }
 
-    private static String albumId(RemoteTrack track) {
+    private static String albumId(RemoteTrack track, Map<String, LinkedHashSet<String>> jellyfinAlbumIds) {
         if (!track.browse.albumId.isEmpty()) return "id:" + track.browse.albumId;
-        if (!track.browse.parentId.isEmpty()) return "parent:" + track.browse.parentId
-                + "\n" + folded(track.album) + "\n" + folded(track.browse.albumArtist);
-        if (track.providerIdentity != null) return "unidentified:" + track.id;
+        if (track.providerIdentity != null) {
+            if (track.album.isEmpty()) return "unidentified:" + track.id;
+            String name = albumNameKey(track);
+            LinkedHashSet<String> knownIds = jellyfinAlbumIds.get(name);
+            if (knownIds != null && knownIds.size() == 1) return "id:" + knownIds.iterator().next();
+            return "name:" + name;
+        }
         String path = track.url.getPath();
         String folder = path.substring(0, path.lastIndexOf('/') + 1);
         return "folder:" + folder + "\n" + folded(track.album) + "\n" + folded(track.browse.albumArtist);
+    }
+
+    private static String albumNameKey(RemoteTrack track) {
+        String artist = track.browse.albumArtist.isEmpty() ? track.artist : track.browse.albumArtist;
+        return folded(track.album) + "\n" + folded(artist);
     }
 
     private static int knownOrder(int value) { return value == 0 ? Integer.MAX_VALUE : value; }

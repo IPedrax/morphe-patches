@@ -20,10 +20,15 @@ public class MusicCatalogTest {
 
     private RemoteTrack track(String itemId, String title, String albumId, int disc, int number,
             List<BrowseMetadata.ArtistCredit> credits) {
-        BrowseMetadata browse = new BrowseMetadata(albumId, "", "Band", "", credits,
-                Collections.singletonList(new BrowseMetadata.ArtistCredit(ARTIST_A, "Band")), disc, number);
+        return track(itemId, title, albumId, "Shared album title", "Band", disc, number, credits);
+    }
+
+    private RemoteTrack track(String itemId, String title, String albumId, String albumTitle,
+            String albumArtist, int disc, int number, List<BrowseMetadata.ArtistCredit> credits) {
+        BrowseMetadata browse = new BrowseMetadata(albumId, "", albumArtist, "", credits,
+                Collections.singletonList(new BrowseMetadata.ArtistCredit(ARTIST_A, albumArtist)), disc, number);
         return new RemoteTrack(connection, URI.create("https://music.example/Audio/" + itemId + "/stream"),
-                itemId, "source", 1024, "v1", "flac", title, "Shared album title", "Band", 120, browse);
+                itemId, "source", 1024, "v1", "flac", title, albumTitle, "Band", 120, browse);
     }
 
     @Test public void keepsSameNamedAlbumsDistinctAndOrdersDiscs() {
@@ -57,12 +62,32 @@ public class MusicCatalogTest {
         assertTrue(catalog.artist("id:" + ARTIST_A).otherTrackIds.isEmpty());
     }
 
-    @Test public void missingJellyfinAlbumIdDoesNotMergeUnrelatedTracks() {
+    @Test public void missingJellyfinAlbumIdUsesSharedAlbumMetadata() {
         MusicCatalog catalog = MusicCatalog.from(Arrays.asList(
                 track("1", "One", "", 0, 0, Collections.emptyList()),
                 track("2", "Two", "", 0, 0, Collections.emptyList())));
-        assertEquals(2, catalog.albumCount());
+        assertEquals(1, catalog.albumCount());
+        assertEquals(2, catalog.albums(0, 1).get(0).tracks.size());
         assertThrows(IllegalArgumentException.class, () -> catalog.albums(0, 101));
+    }
+
+    @Test public void missingJellyfinIdJoinsOneKnownAlbumButKeepsDifferentTitlesSeparate() {
+        MusicCatalog catalog = MusicCatalog.from(Arrays.asList(
+                track("1", "One", ALBUM_A, 1, 1, Collections.emptyList()),
+                track("2", "Two", "", 1, 2, Collections.emptyList()),
+                track("3", "Other", "", "Another album", "Band", 1, 1, Collections.emptyList())));
+        assertEquals(2, catalog.albumCount());
+        assertEquals(2, catalog.album("id:" + ALBUM_A).tracks.size());
+    }
+
+    @Test public void missingJellyfinIdDoesNotGuessBetweenSameNamedReleases() {
+        MusicCatalog catalog = MusicCatalog.from(Arrays.asList(
+                track("1", "One", ALBUM_A, 1, 1, Collections.emptyList()),
+                track("2", "Two", ALBUM_B, 1, 2, Collections.emptyList()),
+                track("3", "Three", "", 1, 3, Collections.emptyList())));
+        assertEquals(3, catalog.albumCount());
+        assertEquals(1, catalog.album("id:" + ALBUM_A).tracks.size());
+        assertEquals(1, catalog.album("id:" + ALBUM_B).tracks.size());
     }
 
     @Test public void webDavUsesFolderAndTagsWithoutDependingOnStreamVersion() {
