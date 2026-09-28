@@ -32,7 +32,7 @@ private val serverResourcesPatch = resourcePatch {
 @Suppress("unused")
 val localFilesFromServerPatch = bytecodePatch(
     name = "Local files from a server",
-    description = "Streams audio from an HTTPS WebDAV folder into Local Files. Configure the server in Spicetify settings. Experimental; requires byte-range support.",
+    description = "Streams audio from an HTTPS WebDAV folder or Jellyfin music library into Local Files. Configure the server in Spicetify settings. Experimental; requires byte-range support.",
     default = false,
 ) {
     compatibleWith(spotifyCompatibility)
