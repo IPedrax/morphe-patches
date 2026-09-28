@@ -2,6 +2,7 @@ package app.spicetify.extension.spotify.localserver;
 
 import static org.junit.Assert.*;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -77,5 +78,22 @@ public class MusicCatalogTest {
         assertEquals(2, before.albumCount());
         assertEquals(before.albums(0, 2).get(0).id, after.albums(0, 2).get(0).id);
         assertNotEquals(one.id, changed.id);
+    }
+
+    @Test public void largeLibraryStillPagesAndSearchesGroupedAlbums() {
+        List<RemoteTrack> tracks = new ArrayList<>(36000);
+        List<BrowseMetadata.ArtistCredit> credits = Collections.singletonList(
+                new BrowseMetadata.ArtistCredit(ARTIST_A, "Band"));
+        for (int index = 0; index < 36000; index++) {
+            String albumId = String.format("%032x", index / 18);
+            tracks.add(track(Integer.toString(index), "Song " + index, albumId,
+                    1, index % 18 + 1, credits));
+        }
+        MusicCatalog catalog = MusicCatalog.from(tracks);
+        assertEquals(36000, catalog.trackCount());
+        assertEquals(2000, catalog.albumCount());
+        assertEquals(80, catalog.albums(0, 80).size());
+        assertEquals(80, catalog.albums(80, 80).size());
+        assertEquals(1, catalog.search("Song 35999", 30).tracks.size());
     }
 }
