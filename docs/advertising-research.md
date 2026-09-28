@@ -91,6 +91,10 @@ produced these current candidates. They are not runtime advertising evidence:
   `playlist_entity_reinventfree_adsfree_context_menu_item`.
   `group_session_context_menu_start` survives, but that alone does not prove
   an upgrade reminder is present.
+- The `play-without-ads-exp` literal survives in `Lp/h5h;->j`, but that method
+  transforms a Premium-destination label from configuration and resources.
+  It is not evidence of the historical context-menu view model or a safe
+  filter point.
 
 ## Implemented brand-ad experiment
 
