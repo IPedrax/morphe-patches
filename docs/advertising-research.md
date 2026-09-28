@@ -82,8 +82,11 @@ produced these current candidates. They are not runtime advertising evidence:
 - `com.spotify.adsdisplay.display.DisplayAdActivity`,
   `mobile-display-ad-card`, `mobile-ads-display-ad-element`, and
   `ScrollCardType.DISPLAY_AD` are display-ad trace candidates. A current Pixel
-  Home screenshot showed neither an upgrade banner nor a display ad, so there
-  is no current visual target validation for them.
+  Home screenshot showed neither an upgrade banner nor a display ad. A later
+  Free-account Search screenshot showed a L'Oréal Paris display card labeled
+  **Advertisement**, and the same campaign appeared over the player while a
+  Jellyfin Local Files track played. These are two observed visual targets;
+  neither has been tied to a patch hook yet.
 - The current resource table lacks `context_menu_remove_ads` and
   `playlist_entity_reinventfree_adsfree_context_menu_item`.
   `group_session_context_menu_start` survives, but that alone does not prove
@@ -107,8 +110,9 @@ The artifact verifier checks hook placement, registers, downstream iterator
 calls, unchanged native model classes, and the compiled helper against the
 selected bundle. See [the verification record](verification.md).
 
-The Pixel account owner confirmed a Free account. No brand-ad card has yet
-appeared for a live on/off comparison. Keep the patch optional and
+The Pixel account owner confirmed a Free account. The Search display card is
+now an observed candidate for an on/off comparison, but its connection to the
+Browse `BRAND_ADS` model is unverified. Keep the patch optional and
 experimental until removal, layout, and ordinary navigation pass that test.
 
 ## Remaining inspection
