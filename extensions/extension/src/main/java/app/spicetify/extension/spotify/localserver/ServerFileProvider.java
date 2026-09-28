@@ -69,7 +69,10 @@ public final class ServerFileProvider extends ContentProvider {
         synchronized (ServerFileProvider.class) {
             if (handler == null) { HandlerThread thread = new HandlerThread("spicetify-server-read"); thread.start(); handler = new Handler(thread.getLooper()); }
         }
-        WebDav dav = new WebDav(snapshot.connection(), () -> ServerConfig.isCurrent(snapshot) && allowed.getAsBoolean());
+        BooleanSupplier active = () -> ServerConfig.isCurrent(snapshot) && allowed.getAsBoolean();
+        ProviderSession session = snapshot.provider() == ServerConfig.Provider.JELLYFIN
+                ? new Jellyfin(snapshot.jellyfinConnection(), active)
+                : new WebDav(snapshot.connection(), active);
         return ((StorageManager) context.getSystemService(Context.STORAGE_SERVICE)).openProxyFileDescriptor(
                 ParcelFileDescriptor.MODE_READ_ONLY, new ProxyFileDescriptorCallback() {
                     private boolean closed;
@@ -79,7 +82,7 @@ public final class ServerFileProvider extends ContentProvider {
                         if (closed) throw new ErrnoException("read", OsConstants.EBADF);
                         try {
                             if (remaining <= 0) throw new IOException("Metadata read budget exceeded.");
-                            int read = dav.read(track, offset, (int) Math.min(size, remaining), data);
+                            int read = session.read(track, offset, (int) Math.min(size, remaining), data);
                             remaining -= read;
                             return read;
                         }

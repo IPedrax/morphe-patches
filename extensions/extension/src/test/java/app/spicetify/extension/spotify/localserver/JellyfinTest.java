@@ -1,7 +1,9 @@
 package app.spicetify.extension.spotify.localserver;
 
 import static org.junit.Assert.*;
+import android.app.Application;
 import java.io.*;
+import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -10,6 +12,7 @@ import org.json.*;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
 @RunWith(RobolectricTestRunner.class)
@@ -68,6 +71,19 @@ public class JellyfinTest {
         assertEquals(LIBRARY, connection.libraryId);
         assertFalse(connection.toString().contains("fixture-token"));
     }
+    @Test public void savedAccountCanChangeMusicLibraryWithoutAnotherSignIn() throws Exception {
+        JellyfinConnection saved = connection();
+        server.handler = request -> {
+            assertEquals("GET", request.method);
+            assertEquals("/jellyfin/UserViews?userId=" + USER, request.target);
+            assertTrue(request.headers.get("Authorization").contains("fixture-token"));
+            return Response.json("{\"Items\":[{\"Id\":\"dddddddddddddddddddddddddddddddd\",\"Name\":\"Other Music\",\"CollectionType\":\"music\"}]}");
+        };
+        JellyfinConnection changed = saved.select(saved.libraries(active::get).get(0));
+        assertEquals("Other Music", changed.libraryName);
+        assertEquals(saved.userId, changed.userId);
+        assertEquals(saved.token(), changed.token());
+    }
     @Test public void quickConnectKeepsChallengeEphemeralAndExchangesApprovedSecret() throws Exception {
         server.handler = request -> {
             assertEquals("POST", request.method);
@@ -108,6 +124,39 @@ public class JellyfinTest {
         assertEquals("Track.flac", track.name);
         assertTrue(track.url.getRawQuery().contains("mediaSourceId=different-source"));
         assertFalse(track.url.toString().contains("fixture-token"));
+    }
+    @Test public void indexUsesJellyfinMetadataWithoutOpeningEveryFileAndReportsExpiredSession() throws Exception {
+        Application app = RuntimeEnvironment.getApplication();
+        Field saved = ServerConfig.class.getDeclaredField("preferences");
+        saved.setAccessible(true);
+        saved.set(null, null);
+        ServerConfig.initialize(app);
+        ServerConfig.forget();
+        JellyfinClient.Account account = new JellyfinClient.Account(
+                new ServerConnection(server.url() + "jellyfin/", "", "", true),
+                ServerConfig.deviceId(), USER, "Listener", "fixture-token");
+        JellyfinConnection selected = new JellyfinConnection(account, LIBRARY, "Music");
+        assertTrue(ServerConfig.configureJellyfinIfCurrent(ServerConfig.snapshot(), true, selected));
+        try {
+            String unsupported = item("dddddddddddddddddddddddddddddddd").replace("flac", "wv");
+            server.handler = request -> page(item(ITEM) + "," + unsupported, 0, 2);
+            ServerIndex.scanAsync();
+            waitForStatus("Tracks ready:");
+            assertEquals(1, server.requests.get());
+            assertEquals(1, ServerIndex.tracks().size());
+            assertEquals("Track", ServerIndex.tracks().get(0).title);
+            assertEquals("Tracks ready: 1 (1 skipped)", ServerIndex.status());
+
+            server.handler = request -> new Response(401, "{}", Map.of());
+            ServerIndex.scanAsync();
+            waitForStatus("Jellyfin sign-in expired");
+            assertEquals(2, server.requests.get());
+        } finally { ServerConfig.forget(); }
+    }
+    private static void waitForStatus(String prefix) throws InterruptedException {
+        long deadline = System.nanoTime() + 5_000_000_000L;
+        while (!ServerIndex.status().startsWith(prefix) && System.nanoTime() < deadline) Thread.sleep(10);
+        assertTrue(ServerIndex.status(), ServerIndex.status().startsWith(prefix));
     }
     @Test public void rejectsDuplicatePagesMalformedSizesAndOversizeCatalogs() throws Exception {
         JellyfinConnection connection = connection();

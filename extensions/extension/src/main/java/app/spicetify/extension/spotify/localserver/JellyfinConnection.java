@@ -1,6 +1,9 @@
 package app.spicetify.extension.spotify.localserver;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /** Immutable selected account and music library. Credentials stay off track URLs. */
 public final class JellyfinConnection {
@@ -20,6 +23,10 @@ public final class JellyfinConnection {
             String token, String libraryId, String libraryName) {
         return new JellyfinConnection(new JellyfinClient.Account(new ServerConnection(root, "", ""), deviceId, userId, userName, token), libraryId, libraryName);
     }
+    public List<JellyfinClient.MusicLibrary> libraries(BooleanSupplier active) throws IOException {
+        return new JellyfinClient(account, active).libraries(account);
+    }
+    public JellyfinConnection select(JellyfinClient.MusicLibrary library) { return account.select(library); }
     JellyfinClient.Account account() { return account; }
     String deviceId() { return account.deviceId(); }
     String token() { return account.token(); }
