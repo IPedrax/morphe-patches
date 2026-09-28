@@ -100,7 +100,10 @@ public final class ServerIndex {
             ServerConfig.publish(snapshot, () -> {
                 if (generation == scanId) {
                     index = completedIndex;
-                    status = "Tracks ready: " + completed.size() + (skippedTracks == 0 ? "" : " (" + skippedTracks + " skipped)");
+                    status = "Tracks ready: " + completed.size()
+                            + " · Albums: " + completedIndex.catalog.albumCount()
+                            + " · Artists: " + completedIndex.catalog.artistCount()
+                            + (skippedTracks == 0 ? "" : " (" + skippedTracks + " skipped)");
                     LocalServerHook.requestRescan();
                 }
             });

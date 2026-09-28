@@ -168,7 +168,7 @@ public class JellyfinTest {
             MusicCatalog catalog = ServerIndex.catalog();
             assertEquals(1, catalog.trackCount());
             assertTrue(ServerIndex.isCurrent(catalog));
-            assertEquals("Tracks ready: 1 (1 skipped)", ServerIndex.status());
+            assertEquals("Tracks ready: 1 · Albums: 1 · Artists: 1 (1 skipped)", ServerIndex.status());
 
             server.handler = request -> new Response(401, "{}", Map.of());
             ServerIndex.scanAsync();
