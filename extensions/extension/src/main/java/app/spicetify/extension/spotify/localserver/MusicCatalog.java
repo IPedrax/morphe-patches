@@ -42,13 +42,13 @@ public final class MusicCatalog {
     public static final class Artist {
         public final String id, name;
         public final List<String> albumIds;
-        public final List<String> trackIds;
+        public final List<String> otherTrackIds;
 
-        private Artist(String id, String name, LinkedHashSet<String> albumIds, LinkedHashSet<String> trackIds) {
+        private Artist(String id, String name, List<String> albumIds, List<String> trackIds) {
             this.id = id;
             this.name = name;
-            this.albumIds = Collections.unmodifiableList(new ArrayList<>(albumIds));
-            this.trackIds = Collections.unmodifiableList(new ArrayList<>(trackIds));
+            this.albumIds = Collections.unmodifiableList(albumIds);
+            this.otherTrackIds = Collections.unmodifiableList(trackIds);
         }
     }
 
@@ -161,9 +161,28 @@ public final class MusicCatalog {
         }
         albums.sort(Comparator.comparing((Album album) -> folded(album.title))
                 .thenComparing(album -> folded(album.artist)).thenComparing(album -> album.id));
+        Map<String, Album> albumsById = new HashMap<>();
+        Map<String, Integer> albumOrderIndex = new HashMap<>();
+        for (int i = 0; i < albums.size(); i++) {
+            albumsById.put(albums.get(i).id, albums.get(i));
+            albumOrderIndex.put(albums.get(i).id, i);
+        }
+        Map<String, Track> tracksById = new HashMap<>();
+        for (Track track : tracks) tracksById.put(track.id, track);
         List<Artist> artists = new ArrayList<>(artistBuilders.size());
-        for (ArtistBuilder value : artistBuilders.values())
-            artists.add(new Artist(value.id, value.name, value.albumIds, value.trackIds));
+        for (ArtistBuilder value : artistBuilders.values()) {
+            List<String> albumIds = new ArrayList<>(value.albumIds);
+            albumIds.sort(Comparator.comparingInt(albumOrderIndex::get));
+            LinkedHashSet<String> albumTracks = new LinkedHashSet<>();
+            for (String albumId : albumIds)
+                for (Track track : albumsById.get(albumId).tracks) albumTracks.add(track.id);
+            List<String> otherTracks = new ArrayList<>();
+            for (String trackId : value.trackIds)
+                if (!albumTracks.contains(trackId)) otherTracks.add(trackId);
+            otherTracks.sort(Comparator.comparing((String id) -> folded(tracksById.get(id).album))
+                    .thenComparing(id -> folded(tracksById.get(id).title)).thenComparing(id -> id));
+            artists.add(new Artist(value.id, value.name, albumIds, otherTracks));
+        }
         artists.sort(Comparator.comparing((Artist artist) -> folded(artist.name)).thenComparing(artist -> artist.id));
         tracks.sort(Comparator.comparing((Track track) -> folded(track.title)).thenComparing(track -> track.id));
         return new MusicCatalog(albums, artists, tracks);

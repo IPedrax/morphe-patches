@@ -1062,3 +1062,14 @@ lint, patch tests, and `buildAndroid` pass. This improvement is in the current
 source and bundle with SHA-256
 `5dd27fbe27b7cfd5cec6feb545e09a77f01009730af7344cc9ae33ebb2fa64ca`;
 the installed Spotify APK still contains the earlier three-minute behavior.
+
+Source commits `52a76e0` and `f1f2ca5` add a grouped server catalog and a
+browser launched from Spicetify settings. The catalog keeps Jellyfin album and
+artist IDs when provided, orders album tracks by disc and track number, and
+offers bounded Albums, Artists, Songs, and Search views. The browser is
+read-only while the exact Spotify local-track playback command is being
+validated; its track rows do not start or queue music. Unit tests, Android
+lint, patch tests, and `buildAndroid` pass on the source. No APK containing
+the browser has been installed, so album counts, grouping, navigation,
+search, and performance on the Pixel remain unverified. The installed APK
+checksum above is unchanged.

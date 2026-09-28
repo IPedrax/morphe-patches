@@ -40,6 +40,7 @@ public class MusicCatalogTest {
         assertEquals("Second", first.tracks.get(1).title);
         assertEquals("Disc two", first.tracks.get(2).title);
         assertEquals(2, catalog.artist("id:" + ARTIST_A).albumIds.size());
+        assertTrue(catalog.artist("id:" + ARTIST_A).otherTrackIds.isEmpty());
         assertEquals(1, catalog.search("disc two", 10).tracks.size());
     }
 
@@ -49,9 +50,10 @@ public class MusicCatalogTest {
                 new BrowseMetadata.ArtistCredit(ARTIST_B, "Guest"));
         MusicCatalog catalog = MusicCatalog.from(Collections.singletonList(track("1", "Duet", ALBUM_A, 0, 0, credits)));
         assertEquals(2, catalog.artistCount());
-        assertEquals(1, catalog.artist("id:" + ARTIST_B).trackIds.size());
+        assertEquals(1, catalog.artist("id:" + ARTIST_B).otherTrackIds.size());
         assertTrue(catalog.artist("id:" + ARTIST_B).albumIds.isEmpty());
         assertEquals(1, catalog.artist("id:" + ARTIST_A).albumIds.size());
+        assertTrue(catalog.artist("id:" + ARTIST_A).otherTrackIds.isEmpty());
     }
 
     @Test public void missingJellyfinAlbumIdDoesNotMergeUnrelatedTracks() {

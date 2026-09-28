@@ -210,14 +210,14 @@ public final class ServerMusicActivity extends Activity {
             case ARTIST:
                 MusicCatalog.Artist artist = catalog.artist(selectedId);
                 if (artist == null) { stale(); return; }
-                total = artist.albumIds.size() + artist.trackIds.size();
+                total = artist.albumIds.size() + artist.otherTrackIds.size();
                 for (int i = offset; i < Math.min(total, offset + PAGE_SIZE); i++) {
                     if (i < artist.albumIds.size()) {
                         MusicCatalog.Album artistAlbum = catalog.album(artist.albumIds.get(i));
                         if (artistAlbum != null)
                             rows.add(new Row(artistAlbum.title, "Album · " + artistAlbum.artist, ViewMode.ALBUM, artistAlbum.id));
                     } else {
-                        MusicCatalog.Track artistTrack = catalog.track(artist.trackIds.get(i - artist.albumIds.size()));
+                        MusicCatalog.Track artistTrack = catalog.track(artist.otherTrackIds.get(i - artist.albumIds.size()));
                         if (artistTrack != null)
                             rows.add(new Row(artistTrack.title, "Song · " + artistTrack.album, null, artistTrack.id));
                     }
@@ -226,7 +226,14 @@ public final class ServerMusicActivity extends Activity {
         }
         String location = mode == ViewMode.ALBUM ? catalog.album(selectedId).title
                 : mode == ViewMode.ARTIST ? catalog.artist(selectedId).name : title(mode);
-        status.setText(location + " · " + (mode == ViewMode.SEARCH ? rows.size() : total) + " shown in catalog");
+        if (mode == ViewMode.SEARCH) {
+            status.setText(search.getText().length() == 0 ? "Search albums, artists, and songs"
+                    : rows.isEmpty() ? "No matches in this server library"
+                    : "Search · " + rows.size() + " results shown");
+        } else {
+            status.setText(location + " · " + (total == 0 ? "0" : (offset + 1) + "–" + (offset + rows.size()))
+                    + " of " + total);
+        }
         previous.setVisibility(offset > 0 && mode != ViewMode.SEARCH ? View.VISIBLE : View.INVISIBLE);
         next.setVisibility(offset + PAGE_SIZE < total ? View.VISIBLE : View.INVISIBLE);
         adapter.notifyDataSetChanged();

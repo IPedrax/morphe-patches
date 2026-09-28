@@ -86,7 +86,11 @@ tokens stay out of track IDs. **Rescan library** refreshes the saved library.
 **Change music library** keeps the saved server session, while **Forget
 server** removes it. A local-source build passed a full Music-library scan,
 playback, and seeking on a Pixel 8. Spotify shows these tracks in one flat
-**Local Files** playlist; album and artist browsing is not available yet.
+**Local Files** playlist. The current source adds **Browse server music** in
+Spicetify settings, with Albums, Artists, Songs, and Search views. Album and
+artist browsing is not yet verified in an installed build. Track playback
+still starts from Spotify's **Local Files** playlist; the new browser does
+not yet play or queue album tracks.
 The installed build and remaining checks are in the
 [verification record](verification.md#jellyfin-in-patched-spotify-september-28-2026).
 
