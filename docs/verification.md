@@ -1006,3 +1006,35 @@ has SHA-256
 and the installed APK bytes match it. A patched Spotify pass remains open.
 The published `dev.4` bundle still contains the WebDAV implementation, not
 these local Jellyfin changes.
+
+## Jellyfin in patched Spotify, September 28, 2026
+
+The local Android bundle built from `ce687a3` was loaded through Manager's
+existing local source. Manager 1.32.0 and Patcher 1.14.1 applied **Clean
+sharing links**, **Hide Premium tab**, and **Local files from a server** to
+the saved original Spotify `9.1.80.2221` APK on the Pixel 8 running Android
+17. The stock base SHA-256 was
+`3dc0c561236d4dc01c17acc12dd219914fa2de61992a3d1428ff6ee677cd45ee`;
+the bundle SHA-256 was
+`49f9725cd19ee03f30f189ee097843d1a219a23a3be93ecde45a1be19ff65ce2`.
+
+The exported candidate SHA-256 was
+`5c0e1c712ee2306547a8a8a01e1c40d1b1caa3c4d638c4f66ec6191f235de24f`.
+The independent artifact checker verified the sharing, settings, and Premium
+navigation hooks, the private Local Files provider and permissions, all
+1,145 unchanged default colors, and the APK signature. A device preflight
+confirmed the candidate had the same package, version code, and signing
+certificate as the installed Spotify app. ADB performed a data-preserving
+update; the installed APK checksum matches the exported candidate. Manager's
+build and export were the normal entry point, while ADB substituted for its
+installer.
+
+Spotify opened signed in, retained the four-tab layout, and exposed the
+**Server files** controls through **Settings and privacy > Spicetify**. The
+Jellyfin provider and Quick Connect option appeared. Entering a hostname
+without `https://` preserved the exact input. Authentication, scanning,
+Local Files catalog display, and playback in Spotify remain to be checked.
+Manager's patch-picker description still mentioned only WebDAV in this
+candidate; source commit `7aa0707` corrects that description, and the
+rebuilt bundle has SHA-256
+`5dc97ec09ee3033af14d81b69eadeb36a62a36c7c1ed109d7f047a848793baed`.
