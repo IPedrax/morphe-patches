@@ -29,9 +29,9 @@ It also includes experimental Jellyfin support in the server-files extension.
 The published `dev.4` bundle supports WebDAV only; see
 [Jellyfin local-build setup](docs/optional-features.md#jellyfin-in-local-builds).
 The current source has an Albums, Artists, Songs, and Search browser for
-server music in Spicetify settings. That browser has not been tested in an
-installed APK and does not yet start playback; Local Files remains the
-playback entry point.
+server music in Spicetify settings. A local six-patch build was tested on a
+Pixel 8: a ten-track Jellyfin album appeared as one ordered album. The browser
+does not yet start playback; Local Files remains the playback entry point.
 
 | Patch | Default | Behavior |
 | --- | --- | --- |

@@ -28,7 +28,7 @@ Enable **Local files from a server** when patching. This feature requires
 Android 8 or later and an HTTPS WebDAV folder with byte-range support.
 The published `dev.4` bundle supports WebDAV. The current source also has
 experimental Jellyfin settings, catalog indexing, and direct streaming;
-Jellyfin has not been verified in a patched Spotify installation.
+Jellyfin was tested in a locally patched Spotify installation on a Pixel 8.
 
 1. Open **Settings and privacy > Spicetify**.
 2. Enter the full WebDAV folder URL, username, and password or app password.
@@ -87,12 +87,21 @@ tokens stay out of track IDs. **Rescan library** refreshes the saved library.
 server** removes it. A local-source build passed a full Music-library scan,
 playback, and seeking on a Pixel 8. Spotify shows these tracks in one flat
 **Local Files** playlist. The current source adds **Browse server music** in
-Spicetify settings, with Albums, Artists, Songs, and Search views. Album and
-artist browsing is not yet verified in an installed build. Track playback
-still starts from Spotify's **Local Files** playlist; the new browser does
-not yet play or queue album tracks.
+Spicetify settings, with Albums, Artists, Songs, and Search views. A local
+six-patch build displayed a ten-track Jellyfin album as one album in track
+order on the Pixel. Track playback still starts from Spotify's **Local Files**
+playlist; the browser does not yet play or queue album tracks.
+
+The browser also groups tracks by album title and album artist when Jellyfin
+omits an album ID. These groups can make its album count higher than Jellyfin's
+**Albums** view. In one test library, 11,068 of 35,274 audio items lacked an
+album ID. The app displayed 2,929 album groups while Jellyfin displayed
+2,007 album objects. Grouping does not change Jellyfin metadata. If the difference
+is unexpected, check the files' album folders and tags, then rescan the
+library. Jellyfin's [music organization guide](https://jellyfin.org/docs/general/server/media/music/)
+describes its one-album-per-folder rule.
 The installed build and remaining checks are in the
-[verification record](verification.md#jellyfin-in-patched-spotify-september-28-2026).
+[verification record](verification.md#grouped-jellyfin-browser-and-combined-patches-september-28-2026).
 
 ## Hide the Premium tab in local builds
 

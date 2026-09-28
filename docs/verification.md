@@ -1069,7 +1069,95 @@ artist IDs when provided, orders album tracks by disc and track number, and
 offers bounded Albums, Artists, Songs, and Search views. The browser is
 read-only while the exact Spotify local-track playback command is being
 validated; its track rows do not start or queue music. Unit tests, Android
-lint, patch tests, and `buildAndroid` pass on the source. No APK containing
-the browser has been installed, so album counts, grouping, navigation,
-search, and performance on the Pixel remain unverified. The installed APK
-checksum above is unchanged.
+lint, patch tests, and `buildAndroid` passed on that source. This was a
+source-only result; the installed browser check follows below.
+
+## Grouped Jellyfin browser and combined patches, September 28, 2026
+
+Jellyfin returns album names on many audio items without `AlbumId`. A scan
+before the grouping fix made 13,060 mostly single-track album rows from
+35,242 playable tracks. Commit `4ae1677` groups missing-ID tracks by album
+title and album artist, joining a known album ID only when the match is
+unique. Explicit IDs still distinguish same-named releases. Unit tests cover
+each case. A fresh development-app scan showed 2,929 groups and 1,008 artists.
+One ten-track album appeared as one row, and its tracks were ordered 1.1
+through 1.10.
+
+A read-only query of the same Jellyfin Music library counted 35,274 audio
+items. Of these, 11,068 had no `AlbumId`; 2,003 distinct album IDs appeared
+on the remaining items. Missing-ID items formed 967 distinct album-title and
+album-artist keys: 31 matched one known ID, one was ambiguous between known
+IDs, and 935 matched none. Jellyfin's own **Albums** page showed 2,007 album
+objects. The app keeps the named fallback groups so those tracks remain
+browsable. The counts need not match Jellyfin's album-object view. The query
+did not change server metadata or expose a credential in the report. Jellyfin
+documents [album folder organization](https://jellyfin.org/docs/general/server/media/music/)
+and has recorded [audio items with an album name but no album ID](https://github.com/jellyfin/jellyfin/issues/2879).
+
+Manager 1.32.0 and Patcher 1.14.1 selected all six current-source patches.
+The older duplicate local source remained enabled with none of its patches
+selected. A base-only export passed the
+independent artifact verifier but Android rejected installation with
+`INSTALL_FAILED_MISSING_SPLIT`. Rebuilding from the original stock split-APK
+archive produced an installable package. Its temporary diagnostic APK had
+SHA-256 `1e3d7cae02f320c1f220136e4808618fb74f503c0f7705deda588247902a8c39`.
+The verifier found all six patch effects and a valid signature. A same-key
+Pixel update preserved Spotify's signed-in state and installed those exact
+bytes.
+
+With all six patches active, Spotify reached Home with four navigation tabs
+and no Premium tab. The **Spicetify** settings screen showed controls for
+sharing, colors, Premium, Home and Browse ads, Home shortcuts, and server
+files. The first automatic Jellyfin scan failed; **Rescan library** completed
+with 35,242 playable tracks, 2,929 album groups, 1,008 artists, and 32
+skipped tracks. The **Browse server music** screen appeared below the Android
+action bar after adding system-window insets. A ten-track album appeared as
+one row, and opening it showed ordered tracks. Spotify's **Local Files** list
+also showed the server tracks. Tapping one changed Spotify's player to that
+track. The diagnostic hooks in two suspected play-command paths did not fire,
+so album-row playback and queueing remain unimplemented. The diagnostic code
+was removed from source after this test.
+
+The first clean source build passed extension unit tests, Android lint, patch
+tests, and `buildAndroid`. Its bundle SHA-256 was
+`501ce65e767de328c2ada412940bbac0a24f75ce2c47683655302be940f2dded`.
+Morphe Desktop 1.17.0 applied all six patches from that bundle in FULL mode.
+The independent verifier checked the sharing, settings, ads, Premium,
+server-files, and Home-pin hooks, 1,145 default color entries, ten selected
+theme changes, and Android signing. The resulting Desktop APK SHA-256 was
+`6d22a6f762982dda95d1554afbda884890cec90ceae75bba1e1185cf4cf84373`.
+
+Manager then applied that bundle to the original split-APK archive
+with all six patches selected. The independent verifier passed on its full
+export, SHA-256 `733353414b980c77290341ff913cce29c8119926db6a9270339eec724ddabc0a`.
+The Pixel's same-key update preserved Spotify's signed-in state and installed
+those exact bytes. Launched from its normal app entry point, Spotify showed
+four navigation tabs without Premium, and the Spicetify settings displayed
+all six patch controls. The automatic Jellyfin scan again failed on first
+launch. **Rescan library** recovered with 35,242 playable tracks, 2,929
+album groups, 1,008 artists, and 32 skipped tracks. **Browse server music**
+placed its tabs below the Android action bar. Opening the ten-track album
+showed tracks ordered from 1.1 through 1.10. The startup scan failure and
+live ad-card suppression remain open; this installed run does not establish
+album-row playback or queueing.
+
+Review found that fitting system windows on the padded browser root replaced
+its 16dp side gutters. An outer inset container now preserves the inner
+layout's 16dp horizontal and 8dp vertical padding. Extension unit tests,
+Android lint, patch tests, and `buildAndroid` passed again. The revised
+bundle SHA-256 is
+`3be48e86a016b9dde840cc771f56d3622f195b76bb6e172a95549994ac6ce49e`.
+Manager applied all six revised patches to the stock split-APK archive. The
+independent artifact verifier passed; the full APK SHA-256 was
+`0ecde03ea9939c7f813b77432838b1e27272c0489a2ab28ffe1f3d7395103e5a`.
+The Pixel installed those exact bytes through a same-key update and retained
+the Spotify account. From the normal launcher, Spotify again showed four
+navigation tabs without Premium. On the final browser screen, the four tabs
+started at x=42 and y=300 on the 1080-pixel-wide Pixel display, leaving the
+action bar clear and preserving the intended side gutters. The automatic
+Jellyfin scan failed again on first launch. The visible **Rescan library**
+action recovered to 35,242 playable tracks, 2,929 album groups, and 1,008
+artists with 32 skipped tracks. The browser then opened the same ten-track
+album, showing its first track as 1.1. Its playback and queue controls remain
+unimplemented. The first-launch failure and live ad-card suppression remain
+open.
