@@ -1193,3 +1193,13 @@ showed no tracks after the update's first-launch scan; an attempted Play
 action from the previous player bar did not establish ordinary playback in
 this run. The previously observed first-launch Jellyfin scan failure remains
 open, and playback needs a separate live check after recovery.
+
+A follow-up native Spotify check opened a Free-account Daily Mix with song
+rows, but selecting the playlist or a song did not start playback. Android's
+Spotify media session remained in state `NONE` with no current item or player
+error. A process-scoped log capture contained no playback failure message.
+The same Daily Mix later opened as an empty playlist. The phone had validated
+connectivity through a VPN during this check, but the September 18 VPN-off
+control above reproduced the album-loading failure. These observations do
+not isolate the network, account, APK signing, or a patch as the cause. Native
+music playback and a served-ad on/off comparison remain open.
