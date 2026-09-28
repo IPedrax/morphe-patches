@@ -84,8 +84,11 @@ processed and skipped. The direct stream must support exact HTTP byte ranges.
 The selected server, account, and library identify the saved catalog; access
 tokens stay out of track IDs. **Rescan library** refreshes the saved library.
 **Change music library** keeps the saved server session, while **Forget
-server** removes it. This local-source path still needs an Android scan,
-playback, and seeking pass before a Spotify runtime claim.
+server** removes it. A local-source build passed a full Music-library scan,
+playback, and seeking on a Pixel 8. Spotify shows these tracks in one flat
+**Local Files** playlist; album and artist browsing is not available yet.
+The installed build and remaining checks are in the
+[verification record](verification.md#jellyfin-in-patched-spotify-september-28-2026).
 
 ## Hide the Premium tab in local builds
 

@@ -145,9 +145,13 @@ below capture the requested advertising controls and personal media servers.
 4. Verify the new Jellyfin provider end to end. The current source has Quick
    Connect and password sign-in, library selection, paginated audio indexing,
    metadata, authenticated range reads, and the shared Local Files provider.
-   The development app has passed Quick Connect, library selection, a full
-   Android scan, playback, and seeking. Finish cancellation, reconnecting,
-   and patched Spotify checks before publishing it as supported.
+   The development app and patched Spotify have passed Quick Connect, library
+   selection, a full Android scan, playback, and seeking. Finish cancellation,
+   reconnecting, and a richer library view before publishing it as supported.
+   Spotify's stock Local Files page is a flat playlist despite the indexed
+   album and artist metadata. Identify the smallest native entry point for a
+   browsable server library with album, artist, and search views; keep normal
+   Spotify playback and queue controls.
 5. Add Plex with the same provider contract once Jellyfin establishes the
    needed operations. Include account authorization, server and music-library
    selection, expired-session handling, and server-specific credentials.

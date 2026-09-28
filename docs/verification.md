@@ -1038,3 +1038,27 @@ Manager's patch-picker description still mentioned only WebDAV in this
 candidate; source commit `7aa0707` corrects that description, and the
 rebuilt bundle has SHA-256
 `5dc97ec09ee3033af14d81b69eadeb36a62a36c7c1ed109d7f047a848793baed`.
+
+Quick Connect was then approved in the signed-in Jellyfin browser. On the
+installed APK with SHA-256
+`5c0e1c712ee2306547a8a8a01e1c40d1b1caa3c4d638c4f66ec6191f235de24f`,
+the Music library saved and scanned **35,242 tracks (32 skipped)**. After
+enabling Spotify's **Local audio files** setting, its **Local Files** playlist
+showed the scanned tracks. A track from The Garden played in Spotify; seeking
+moved its displayed position from about **0:13 to 0:47**, playback continued,
+and it was paused at **1:10**. The device owner confirmed audible playback.
+
+Spotify presents the result as one flat **Local Files** playlist. Track rows
+show artist and album text, but there are no album or artist browsing groups
+for this server catalog. The richer library experience is a separate feature
+gap. A display ad was visible on the Search landing page and over the player
+while this three-patch APK was installed. It contains no brand-ad filter, so
+these observations provide a live control for later visual-ad tests. They do
+not establish that the unpublished ad patch removes either placement.
+
+Source commit `d706634` raises the Quick Connect polling window from three to
+nine minutes, short of Jellyfin's ten-minute server expiry. Android unit tests,
+lint, patch tests, and `buildAndroid` pass. This improvement is in the current
+source and bundle with SHA-256
+`5dd27fbe27b7cfd5cec6feb545e09a77f01009730af7344cc9ae33ebb2fa64ca`;
+the installed Spotify APK still contains the earlier three-minute behavior.
