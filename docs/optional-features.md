@@ -130,8 +130,8 @@ The patch filters the identified image and video brand-ad sections before
 Home and Browse build their card lists. It preserves ordinary sections and
 leaves the original protobuf lists unchanged. Turning the switch off returns
 the original lists. Unexpected models also return the original lists.
-Audio ads, player display ads, pop-ups, and upgrade reminders need separate
-patches.
+Audio ads, player display ads, pop-ups, and upgrade reminders are outside
+this patch.
 
 The patch targets Spotify `9.1.80.2221` and rejects changed models or callers.
 Static APK checks and development-app settings tests pass. An actual ad card
@@ -139,12 +139,28 @@ has not yet been observed for an on/off comparison, so live ad removal and
 layout after removal remain unverified. See [advertising research](advertising-research.md)
 and [the verification record](verification.md).
 
+## Hide player ad cards in local builds
+
+The current source includes a separate optional **Hide player ad cards**
+patch. Select it when patching, then open **Settings and privacy >
+Spicetify**. Its switch starts on. Restart Spotify after changing it.
+
+The patch suppresses the mapped image brand-ad card when Now Playing uses
+this model, while leaving other player sections alone. Turning the switch
+off restores the native decision. It targets Spotify `9.1.80.2221` and
+refuses a changed player-ad model or mapper. It does not suppress audio ads,
+other player overlays, or upgrade prompts. The patch applies to the
+inspected stock APK. The artifact verifier confirms the exact hook and
+unchanged native models. An on/off comparison with a live player ad is
+still pending.
+
 ## Verification
 
 The extension tests cover URL confinement, range responses, index scoping,
 disabled access, protobuf serialization, pin identity and persistence, and
-settings recovery. Patch-time snapshots match the inspected stock APK, and
-all four patches apply together.
+settings recovery. Patch-time snapshots match the inspected stock APK. The
+published four-patch bundle and the current seven-patch local build both
+apply to that target.
 
 On a Pixel 8 with Spotify `9.1.80.2221`, Manager installation, Home ordering
 after restart, unpinning, HTTPS metadata extraction, native Local Files

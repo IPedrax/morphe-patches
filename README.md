@@ -21,9 +21,10 @@ by default; colors, Home shortcut pinning, and HTTPS WebDAV server files are
 optional.
 See [optional feature setup and limits](docs/optional-features.md).
 
-The current source also includes an optional **Hide Premium tab** patch for
-local testing. It is not yet published. See
-[local navigation testing](docs/optional-features.md#hide-the-premium-tab-in-local-builds).
+The current source also includes optional **Hide Premium tab**, **Hide Home
+and Browse ads**, and **Hide player ad cards** patches for local testing.
+They are not yet published. See
+[local feature setup and limits](docs/optional-features.md).
 
 It also includes experimental Jellyfin support in the server-files extension.
 The published `dev.4` bundle supports WebDAV only; see

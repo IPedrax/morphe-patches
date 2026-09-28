@@ -1,8 +1,8 @@
 # Advertising UI research
 
 This note records source-level leads for separate **Hide upgrade prompts** and
-**Hide visual ads** experiments, including the implemented Home and Browse
-brand-ad filter. It does not establish runtime ad removal in Spotify
+**Hide visual ads** experiments, including the implemented Home, Browse, and
+Now Playing brand-ad filters. It does not establish runtime ad removal in Spotify
 `9.1.80.2221`, and it excludes account-tier spoofing and audio-ad suppression.
 
 ## Historical evidence
@@ -114,6 +114,19 @@ The Pixel account owner confirmed a Free account. The Search display card is
 now an observed candidate for an on/off comparison, but its connection to the
 Browse `BRAND_ADS` model is unverified. Keep the patch optional and
 experimental until removal, layout, and ordinary navigation pass that test.
+
+## Implemented player-card experiment
+
+In the stock `9.1.80.2221` APK, `Lp/ja31;->invoke(Object)` maps
+`com.spotify.scrollsita.v1.Section` to a player model. Its image-brand-ad
+case checks `Section.o0()` and returns no model when that result is false.
+The separate **Hide player ad cards** patch filters that Boolean result
+before the branch. The default-on setting affects only this image-brand-ad
+case. Four exact class snapshots guard the mapper, section model, card model,
+and renderer. The artifact verifier checks the hook's register flow and that
+the native model classes are unchanged. A changed model is rejected during
+patching. These static checks do not establish that the observed player
+overlay uses this mapper; live on/off comparison is still needed.
 
 ## Remaining inspection
 

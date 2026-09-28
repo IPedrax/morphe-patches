@@ -1161,3 +1161,35 @@ artists with 32 skipped tracks. The browser then opened the same ten-track
 album, showing its first track as 1.1. Its playback and queue controls remain
 unimplemented. The first-launch failure and live ad-card suppression remain
 open.
+
+## Player ad-card patch and seven-patch Pixel update, September 29, 2026
+
+The optional **Hide player ad cards** patch filters the Boolean result of the
+stock Now Playing image-brand-ad mapper before its existing null branch. It
+checks four exact class digests for Spotify `9.1.80.2221`. The independent
+artifact verifier checks its call opcode, argument and result registers,
+branch, capability, and unchanged native player models. Verifier regression
+fixtures reject altered hook instructions, and a modified stock player-ad
+model is refused before producing an APK.
+
+Extension unit tests, Android lint, patch tests, and `buildAndroid` passed.
+Morphe Desktop 1.17.0 applied all seven patches in FULL mode to the exact
+stock base APK. The independent verifier checked the combined hooks, 1,145
+default color entries, ten selected theme changes, and APK signing. Manager
+1.32.0 then applied seven of seven patches to the original five-part stock
+split archive. The exact bundle loaded into Manager had SHA-256
+`e05194e7bc1555ac0cf4b48ca4a3d6e82a04fd6875182504580d3001ade74a9c`.
+The exported full APK had SHA-256
+`18bd737054be208b4a587e2851eb1c766f848680c94430577897ef45b9147ec5`
+and passed the same independent checks. A same-key Pixel update installed
+those exact bytes, preserved the signed-in account, and opened through the
+normal launcher with four navigation tabs and no Premium tab.
+
+The Spicetify screen showed the new **Hide player ad cards** control enabled.
+Tapping it turned it off, and tapping it again restored the enabled state.
+Spotify did not serve a visible ad card on Search during this run, so actual
+card removal, its layout, and audio-ad behavior remain unverified. Local Files
+showed no tracks after the update's first-launch scan; an attempted Play
+action from the previous player bar did not establish ordinary playback in
+this run. The previously observed first-launch Jellyfin scan failure remains
+open, and playback needs a separate live check after recovery.
