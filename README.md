@@ -25,6 +25,10 @@ The current source also includes an optional **Hide Premium tab** patch for
 local testing. It is not yet published. See
 [local navigation testing](docs/optional-features.md#hide-the-premium-tab-in-local-builds).
 
+It also includes experimental Jellyfin support in the server-files extension.
+The published `dev.4` bundle supports WebDAV only; see
+[Jellyfin local-build setup](docs/optional-features.md#jellyfin-in-local-builds).
+
 | Patch | Default | Behavior |
 | --- | --- | --- |
 | Clean sharing links | Enabled | Removes `si`, `pi`, and known `utm_*` parameters from `open.spotify.com` links. Preserves timestamps, context, other parameters, and fragments. |

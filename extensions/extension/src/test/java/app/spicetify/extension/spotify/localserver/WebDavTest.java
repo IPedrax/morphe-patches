@@ -49,6 +49,12 @@ public class WebDavTest {
     @Test public void productionRejectsPlainHttp() {
         assertThrows(IllegalArgumentException.class, () -> new ServerConnection("http://127.0.0.1/music/", "u", "p"));
     }
+    @Test public void missingSchemeDefaultsToHttps() {
+        assertEquals("https://dav.example/music/", new ServerConnection("dav.example/music", "u", "p").root.toString());
+        assertEquals("https://dav.example:8443/music/", new ServerConnection("dav.example:8443/music", "u", "p").root.toString());
+        assertThrows(IllegalArgumentException.class, () -> new ServerConnection("http:/dav.example/music", "u", "p"));
+        assertThrows(IllegalArgumentException.class, () -> new ServerConnection("http:443", "u", "p"));
+    }
     @Test public void rejectsCrossOriginOrRootEscapesBeforeNetwork() {
         for (String href : List.of("https://other.example/song.mp3", "//other.example/song.mp3", "/outside/song.mp3",
                 "../song.mp3", "%2e%2e/song.mp3", "dir%2fsong.mp3", "dir%5csong.mp3", "dir%252fsong.mp3", "song.mp3?token=1", "song.mp3#x")) {

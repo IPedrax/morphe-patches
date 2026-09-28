@@ -41,8 +41,18 @@ Start from the launcher to follow the same settings entry point each time:
 
 1. Select **Open patch settings**. Change a preference, leave settings, and
    reopen it to check persistence. Restart the app when testing startup.
-2. In the server section, enter an HTTPS WebDAV folder URL and its
-   credentials, enable **Use server files**, and select **Save and scan**.
+2. In the server section, choose a provider and configure it:
+   - For WebDAV, enter an HTTPS folder URL and its credentials, enable
+     **Use server files**, and select **Save and scan**.
+   - For Jellyfin, enter its HTTPS server URL, select **Use Quick Connect**,
+     and approve the displayed code in a signed-in Jellyfin browser. If Quick
+     Connect is unavailable, enter a username and password and select
+     **Sign in with password**. Choose a music library, enable **Use server
+     files**, and select **Save library and scan**. The password field clears
+     after submission; the selected account session is saved privately.
+
+   You can omit `https://` from either server URL. The app assumes HTTPS when
+   no scheme is given and rejects an explicit `http://` URL.
 3. Wait for the scan result, then return to the launcher and select
    **Refresh tracks**. The launcher shows up to 50 indexed tracks.
 4. Select a track's **Play** button. Check audible playback, advancing time,
@@ -56,7 +66,10 @@ Preview playback uses Android's `MediaPlayer` through the production private
 leaves the foreground. It does not exercise Spotify's queue, background
 playback, notifications, catalog, or codec selection.
 
-Use **Forget server** when finished with test credentials. Server credentials
+Use **Rescan library** after changing tracks in Jellyfin. Use **Change music
+library** to select another library on the saved server. Turning **Use server
+files** off clears the track list while keeping the saved configuration;
+**Forget server** removes the saved credentials and tracks. Server credentials
 are private app data, but this is a debuggable app; use a test account and
 keep real credentials out of logs, screenshots, and repository files.
 

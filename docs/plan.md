@@ -142,12 +142,12 @@ below capture the requested advertising controls and personal media servers.
    seeking where available, background playback, and reconnecting. Silence
    alone is not success. Do not bundle account-tier spoofing into visual
    cleanup or claim server-side Premium features from local flags.
-4. Add Jellyfin as the first additional personal-library provider. Start with
-   server sign-in, library selection, paginated audio indexing, metadata,
-   direct streaming, seeking, cancellation, and reconnecting. Use stable
-   provider/item identities instead of token-bearing URLs as track IDs.
-   Reuse the Local Files hook and private streaming provider; separate catalog
-   discovery and authenticated byte reads from WebDAV-specific code.
+4. Verify the new Jellyfin provider end to end. The current source has Quick
+   Connect and password sign-in, library selection, paginated audio indexing,
+   metadata, authenticated range reads, and the shared Local Files provider.
+   The development app has passed Quick Connect, library selection, a full
+   Android scan, playback, and seeking. Finish cancellation, reconnecting,
+   and patched Spotify checks before publishing it as supported.
 5. Add Plex with the same provider contract once Jellyfin establishes the
    needed operations. Include account authorization, server and music-library
    selection, expired-session handling, and server-specific credentials.
@@ -157,8 +157,9 @@ Jellyfin supports password authentication and Quick Connect, both yielding
 access tokens. Prefer Quick Connect when available, with sign-in as fallback.
 See the [official authentication guide](https://kotlin-sdk.jellyfin.org/guide/authentication.html).
 Plex documents token authentication and PIN authorization in its
-[server API reference](https://developer.plex.tv/pms/). These integrations are
-planned, not implemented. Transcoding, offline downloads, and playlist sync
+[server API reference](https://developer.plex.tv/pms/). Plex is planned;
+Jellyfin is implemented in the current source but still needs Android runtime
+verification. Transcoding, offline downloads, and playlist sync
 need separate design and tests after direct audio playback works.
 
 The live `cvnfork/morphe-spotify-patches` main tree inspected on September 21,

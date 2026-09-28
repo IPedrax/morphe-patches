@@ -32,7 +32,7 @@ public final class JellyfinClient {
 
     private static String normalize(String text) {
         try {
-            URI uri = URI.create(text.trim());
+            URI uri = URI.create(ServerConnection.assumeHttps(text));
             String path = uri.getRawPath();
             if (path == null) path = "";
             boolean web = path.endsWith("/web/") || path.endsWith("/web") || path.endsWith("/web/index.html");

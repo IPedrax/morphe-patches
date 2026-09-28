@@ -17,7 +17,7 @@ public final class ServerConnection {
 
     ServerConnection(String url, String username, String password, boolean loopbackTest) {
         URI parsed;
-        try { parsed = URI.create(url.trim()); }
+        try { parsed = URI.create(assumeHttps(url)); }
         catch (RuntimeException ex) { throw new IllegalArgumentException("Enter a valid HTTPS WebDAV folder URL."); }
         boolean loopback = loopbackTest && "http".equals(parsed.getScheme()) && "127.0.0.1".equals(parsed.getHost());
         if ((!"https".equals(parsed.getScheme()) && !loopback) || parsed.getHost() == null
@@ -36,6 +36,19 @@ public final class ServerConnection {
     }
 
     public boolean hasPassword() { return !password.isEmpty(); }
+    static String assumeHttps(String input) {
+        String value = input.trim();
+        if (value.regionMatches(true, 0, "http:", 0, 5)
+                || value.regionMatches(true, 0, "https:", 0, 6)) return value;
+        int colon = value.indexOf(':');
+        int slash = value.indexOf('/');
+        if (colon >= 0 && (slash < 0 || colon < slash)) {
+            int portEnd = slash < 0 ? value.length() : slash;
+            String port = value.substring(colon + 1, portEnd);
+            if (port.isEmpty() || !port.chars().allMatch(Character::isDigit)) return value;
+        }
+        return "https://" + value;
+    }
     String password() { return password; }
     String authorization() {
         return username.isEmpty() ? null : "Basic " + Base64.encodeToString(

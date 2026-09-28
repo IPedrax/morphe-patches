@@ -61,6 +61,7 @@ public class JellyfinTest {
     }
     @Test public void normalizesCopiedWebUrlAndRejectsUnsafeBases() {
         assertEquals("https://music.example/proxy/", new JellyfinClient("https://music.example/proxy/web/#/home", "id", () -> true).root().toString());
+        assertEquals("https://music.example:8096/proxy/", new JellyfinClient("music.example:8096/proxy/web/#/home", "id", () -> true).root().toString());
         for (String url : List.of("http://music.example", "https://user:password@music.example", "https://music.example/?token=x", "https://music.example/%2e%2e/", "https://music.example/#other")) {
             assertThrows(IllegalArgumentException.class, () -> new JellyfinClient(url, "id", () -> true));
         }

@@ -889,10 +889,11 @@ Spotify APK were left untouched during this unit; the emulator stayed closed.
 
 ## Jellyfin protocol foundation, September 21, 2026
 
-The source now has Jellyfin authentication, music-library discovery, paginated
-indexing, and authenticated range reads. Settings and saved configurations
-still use WebDAV. Jellyfin is not yet selectable in the Android app, and this
-unit does not establish Spotify playback or release readiness.
+At this stage, the source had Jellyfin authentication, music-library discovery,
+paginated indexing, and authenticated range reads. Settings and saved
+configurations still used WebDAV. Jellyfin was not yet selectable in the
+Android app, and this unit did not establish Spotify playback or release
+readiness.
 
 Quick Connect was approved through an existing Jellyfin browser session. A
 temporary diagnostic session confirmed the current server's music views,
@@ -934,3 +935,74 @@ request returned HTTP 401, and its local credential file was deleted. No
 Spotify installation, account data, or playback was changed by these checks,
 and the emulator remained closed. Settings integration and a normal Android
 sign-in, full scan, playback, and seeking pass are the next verification step.
+
+## Jellyfin settings and Android sign-in entry, September 28, 2026
+
+The current source adds Jellyfin as a selectable provider in the real
+server-files settings view. The saved provider, account, and music library
+scope catalog scans and range reads. Saving a new provider removes credentials
+for the previous provider. Disabling server files clears the index but retains
+the saved connection; **Forget server** removes its credentials and tracks.
+
+The initial settings source passed 90 extension unit tests and five
+development-app tests.
+Both Android lint tasks and development APK assembly passed. Twelve settings
+tests cover provider selection, credential preservation until save, HTTPS
+validation, password-field clearing, forgetting, and the existing WebDAV
+controls. These are source and fixture checks, not a live catalog result.
+
+On the Pixel 8, the standalone development app opened through its launcher
+and displayed the Jellyfin provider, HTTPS server field, and both sign-in
+methods. The entered HTTPS server URL was visible in the field. **Use Quick
+Connect** requested a code and showed the approval instructions. The first
+code expired after three minutes without approval, and the app displayed a
+retry message. That first attempt established the visible challenge and
+expiry flow.
+The development APK installed on the Pixel exactly matches the locally tested
+APK, SHA-256 `d1649e4d0af7d557b883c4ba1ebebe4d2fd7c01798cc106243350c5371f5c453`.
+Spotify itself was not replaced or modified for this test. The emulator stayed
+closed.
+
+A fresh Quick Connect code was approved in a signed-in Jellyfin browser. The
+development app displayed the **Music** library. Selecting it and enabling
+server files started an Android scan that finished with **Tracks ready: 35242
+(32 skipped)**. Returning through the app's normal navigation showed 35,242
+server tracks, with up to 50 listed on screen. A 16-second track reached
+**Playing: 4 / 16 seconds** and then finished. A longer 206-second track
+reached **Playing: 2 / 206 seconds**; selecting **Seek forward 5 seconds**
+advanced the displayed position to **Playing: 10 / 206 seconds**. **Stop
+playback** was selected afterward. This development-app path uses the production private
+file provider, but it does not exercise Spotify's Local Files hook.
+
+The source now accepts either server hostname without a URL scheme and assumes
+HTTPS; an explicit HTTP scheme remains invalid. Extension tests cover bare
+WebDAV hosts, host-and-port Jellyfin web URLs, and explicit HTTP rejection.
+Review-driven tests also cover saving a Jellyfin library, switching providers,
+an in-flight picker callback, and enabling a saved library during selection.
+The final source passed 97 extension tests, including 18 settings tests, and
+five development-app tests. Android lint and `buildAndroid` passed. The local
+bundle has SHA-256
+`49f9725cd19ee03f30f189ee097843d1a219a23a3be93ecde45a1be19ff65ce2`;
+its embedded extension DEX contains the new URL guidance. This local file has
+the same versioned filename as `dev.4`, but it has not replaced the published
+bundle.
+
+A same-key development-app update retained the saved Jellyfin server, account,
+and Music library. Entering only the server hostname in the draft URL field
+and choosing **Change music library** loaded the Music picker through that
+saved session, without another sign-in. The final update's APK has SHA-256
+`6333e8265c2520577c581e05cdad240348e14c9d0c8cf09ba0716a08235c88e0`,
+and its installed bytes matched that tested build. The fresh scan completed
+with **Tracks ready: 35242 (32 skipped)**. On request, the 206-second track
+played again, reaching **Playing: 55 / 206 seconds** before it was stopped.
+The device owner confirmed hearing normal audio on the Pixel.
+
+Final review caught a failure path where **Use server files** could remain
+checked during failed Jellyfin sign-in even though the saved provider stayed
+disabled. The settings view now restores the switch to the saved state on
+error; a regression test covers that sequence. The rebuilt development APK
+has SHA-256
+`b6e7b3acead1b537341d4505456ff0f02f631e49735d60b9e18e568819c8cb91`,
+and the installed APK bytes match it. A patched Spotify pass remains open.
+The published `dev.4` bundle still contains the WebDAV implementation, not
+these local Jellyfin changes.

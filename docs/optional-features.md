@@ -26,6 +26,9 @@ Spotify `9.1.80.2221`.
 
 Enable **Local files from a server** when patching. This feature requires
 Android 8 or later and an HTTPS WebDAV folder with byte-range support.
+The published `dev.4` bundle supports WebDAV. The current source also has
+experimental Jellyfin settings, catalog indexing, and direct streaming;
+Jellyfin has not been verified in a patched Spotify installation.
 
 1. Open **Settings and privacy > Spicetify**.
 2. Enter the full WebDAV folder URL, username, and password or app password.
@@ -35,6 +38,8 @@ Android 8 or later and an HTTPS WebDAV folder with byte-range support.
    in your library.
 
 The URL must identify the WebDAV folder, not the server's web interface.
+You can omit `https://`; the app assumes HTTPS. An explicit `http://` URL is
+rejected.
 Blank password fields retain a saved password only when the folder and
 username stay unchanged. Changing the server or account never transfers the
 old password. **Forget server** removes the saved configuration and index.
@@ -60,6 +65,25 @@ The index is scoped to the saved configuration. A scan from an old
 configuration cannot publish into a new one. Audio is streamed through
 Android's file-descriptor API without a persistent audio cache. The app scans
 again after starting; this feature does not provide offline downloads.
+
+### Jellyfin in local builds
+
+Use the [standalone development app](development-app.md) to test Jellyfin
+without replacing Spotify. Enter an HTTPS Jellyfin server URL, then approve
+the displayed Quick Connect code in a browser already signed in to Jellyfin.
+You can omit `https://` from the URL; an explicit `http://` URL is rejected.
+You can use the password sign-in control if Quick Connect is unavailable.
+Choose a music library, enable **Use server files**, then select **Save
+library and scan**. A code expires after three minutes;
+start Quick Connect again if the screen reports expiry.
+
+Jellyfin indexing supports up to 50,000 items and reports how many items were
+processed and skipped. The direct stream must support exact HTTP byte ranges.
+The selected server, account, and library identify the saved catalog; access
+tokens stay out of track IDs. **Rescan library** refreshes the saved library.
+**Change music library** keeps the saved server session, while **Forget
+server** removes it. This local-source path still needs an Android scan,
+playback, and seeking pass before a Spotify runtime claim.
 
 ## Hide the Premium tab in local builds
 
