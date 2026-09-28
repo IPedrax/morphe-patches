@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class VerifyAdsDexTest {
     enum Change { NONE, ARGUMENT, RESULT, GETTER, FILTER, ITERATOR, CALLER, MISSING, DUPLICATE, CAPABILITY }
+    enum PlayerChange { NONE, OPCODE, ARGUMENT, RESULT, BRANCH, GETTER, CAPABILITY, CAPABILITY_ACCESS }
 
     @Test void acceptsExpectedHooks() { VerifyAdsDex.verifyHooks(fixture(Change.NONE), true); }
 
@@ -23,6 +24,48 @@ class VerifyAdsDexTest {
     }
 
     @Test void acceptsNoExtensionWhenNotSelected() { VerifyAdsDex.verifyHooks(List.of(), false); }
+
+    @Test void acceptsExpectedPlayerHook() { VerifyAdsDex.verifyPlayerHooks(playerFixture(PlayerChange.NONE), true); }
+
+    @Test void rejectsBrokenPlayerHooks() {
+        for (var change : PlayerChange.values()) if (change != PlayerChange.NONE) {
+            assertThrows(AssertionError.class, () -> VerifyAdsDex.verifyPlayerHooks(playerFixture(change), true), change.name());
+        }
+    }
+
+    @Test void rejectsPlayerHookWhenPatchIsNotSelected() {
+        assertThrows(AssertionError.class, () -> VerifyAdsDex.verifyPlayerHooks(playerFixture(PlayerChange.NONE), false));
+    }
+
+    @Test void acceptsNoPlayerHookWhenNotSelected() { VerifyAdsDex.verifyPlayerHooks(List.of(), false); }
+
+    List<ImmutableClassDef> playerFixture(PlayerChange change) {
+        var code = List.<Instruction>of(
+                new ImmutableInstruction35c(Opcode.INVOKE_VIRTUAL, 1, 4, 0, 0, 0, 0,
+                        new ImmutableMethodReference("Lcom/spotify/scrollsita/v1/Section;",
+                                change == PlayerChange.GETTER ? "p0" : "o0", List.of(), "Z")),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT, 4),
+                new ImmutableInstruction3rc(change == PlayerChange.OPCODE ? Opcode.INVOKE_VIRTUAL_RANGE : Opcode.INVOKE_STATIC_RANGE,
+                        change == PlayerChange.ARGUMENT ? 5 : 4, 1,
+                        new ImmutableMethodReference(VerifyAdsDex.PLAYER_HELPER, "showImageBrandAd", List.of("Z"), "Z")),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT, change == PlayerChange.RESULT ? 5 : 4),
+                new ImmutableInstruction11n(Opcode.CONST_4, 5, 3),
+                new ImmutableInstruction21t(Opcode.IF_EQZ, change == PlayerChange.BRANCH ? 5 : 4, 2),
+                new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 4));
+        var caller = new ImmutableMethod("Lp/ja31;", "invoke",
+                List.of(new ImmutableMethodParameter("Ljava/lang/Object;", Set.of(), null)),
+                "Ljava/lang/Object;", 1, Set.of(), Set.of(),
+                new ImmutableMethodImplementation(7, code, List.of(), List.of()));
+        var capabilityMethod = new ImmutableMethod(VerifyAdsDex.INSTALLED, "hidePlayerAdCards", List.of(), "Z",
+                change == PlayerChange.CAPABILITY_ACCESS ? 1 : 9, Set.of(), Set.of(),
+                new ImmutableMethodImplementation(1, List.of(
+                        new ImmutableInstruction11n(Opcode.CONST_4, 0, change == PlayerChange.CAPABILITY ? 0 : 1),
+                        new ImmutableInstruction11x(Opcode.RETURN, 0)), List.of(), List.of()));
+        var capability = new ImmutableClassDef(VerifyAdsDex.INSTALLED, 1, "Ljava/lang/Object;", List.of(), null,
+                Set.of(), List.of(), List.of(capabilityMethod));
+        return List.of(new ImmutableClassDef("Lp/ja31;", 1, "Ljava/lang/Object;", List.of(), null,
+                Set.of(), List.of(), List.of(caller)), capability);
+    }
 
     List<ImmutableClassDef> fixture(Change change) {
         var classes = new ArrayList<ImmutableClassDef>();

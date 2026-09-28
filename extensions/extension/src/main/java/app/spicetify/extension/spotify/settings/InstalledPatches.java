@@ -27,4 +27,8 @@ public final class InstalledPatches {
     public static boolean hideBrandAds() {
         return false;
     }
+
+    public static boolean hidePlayerAdCards() {
+        return false;
+    }
 }

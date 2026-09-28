@@ -10,6 +10,7 @@ public final class PatchSettings {
     private static final String CLEAN_SHARING = "clean_sharing";
     private static final String HIDE_PREMIUM_TAB = "hide_premium_tab";
     private static final String HIDE_BRAND_ADS = "hide_brand_ads";
+    private static final String HIDE_PLAYER_AD_CARDS = "hide_player_ad_cards";
     private static volatile SharedPreferences preferences;
 
     private PatchSettings() {}
@@ -55,5 +56,16 @@ public final class PatchSettings {
         SharedPreferences current = preferences;
         if (current == null) throw new IllegalStateException("Spicetify settings are not initialized.");
         current.edit().putBoolean(HIDE_BRAND_ADS, enabled).apply();
+    }
+
+    public static boolean hidePlayerAdCardsEnabled() {
+        SharedPreferences current = preferences;
+        return current != null && current.getBoolean(HIDE_PLAYER_AD_CARDS, true);
+    }
+
+    public static void setHidePlayerAdCardsEnabled(boolean enabled) {
+        SharedPreferences current = preferences;
+        if (current == null) throw new IllegalStateException("Spicetify settings are not initialized.");
+        current.edit().putBoolean(HIDE_PLAYER_AD_CARDS, enabled).apply();
     }
 }

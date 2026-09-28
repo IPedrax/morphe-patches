@@ -12,11 +12,13 @@ import com.android.tools.smali.dexlib2.writer.pool.DexPool;
 
 class VerifyAdsDex {
     static final String HELPER = "Lapp/spicetify/extension/spotify/ads/BrandAds;";
+    static final String PLAYER_HELPER = "Lapp/spicetify/extension/spotify/ads/PlayerAdCards;";
     static final String INSTALLED = "Lapp/spicetify/extension/spotify/settings/InstalledPatches;";
     static final Map<String, String> CALLERS = Map.of("Lp/jb20;", "invoke", "Lp/vot;", "g", "Lp/x7v0;", "a");
     static final List<String> MODELS = List.of("Lp/ih40;",
             "Lcom/spotify/casita/v1/resolved/Section;", "Lcom/spotify/browsita/v1/resolved/Section;",
             "Lcom/spotify/casita/v1/resolved/HomeStructure;", "Lcom/spotify/browsita/v1/resolved/BrowseStructure;");
+    static final List<String> PLAYER_MODELS = List.of("Lcom/spotify/scrollsita/v1/Section;", "Lp/uti0;", "Lp/v7r;");
 
     static void require(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
@@ -101,26 +103,82 @@ class VerifyAdsDex {
         require(enabled ? capabilities == 1 : capabilities <= 1, "Missing or duplicate brand-ad capability");
     }
 
+    static void verifyPlayerHooks(Collection<? extends ClassDef> classes, boolean enabled) {
+        int hooks = 0;
+        int capabilities = 0;
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null) continue;
+            var code = new ArrayList<Instruction>();
+            method.getImplementation().getInstructions().forEach(code::add);
+            if (cls.getType().equals(INSTALLED) && method.getName().equals("hidePlayerAdCards")) {
+                capabilities++;
+                require(method.getParameterTypes().isEmpty() && method.getReturnType().equals("Z")
+                        && AccessFlags.PUBLIC.isSet(method.getAccessFlags()) && AccessFlags.STATIC.isSet(method.getAccessFlags())
+                        && code.size() == 2 && code.get(0).getOpcode() == Opcode.CONST_4
+                        && ((NarrowLiteralInstruction) code.get(0)).getNarrowLiteral() == (enabled ? 1 : 0)
+                        && code.get(1).getOpcode() == Opcode.RETURN
+                        && ((OneRegisterInstruction) code.get(0)).getRegisterA() == ((OneRegisterInstruction) code.get(1)).getRegisterA(),
+                        "Player-ad capability differs from patch selection");
+            }
+            for (int index = 0; index < code.size(); index++) {
+                if (!(code.get(index) instanceof ReferenceInstruction ref)
+                        || !(ref.getReference() instanceof MethodReference target)
+                        || !target.getDefiningClass().equals(PLAYER_HELPER) || cls.getType().equals(PLAYER_HELPER)) continue;
+                hooks++;
+                require(enabled && cls.getType().equals("Lp/ja31;") && method.getName().equals("invoke")
+                        && method.getParameterTypes().equals(List.of("Ljava/lang/Object;"))
+                        && reference(code.get(index)).equals(PLAYER_HELPER + "->showImageBrandAd(Z)Z")
+                        && index >= 2 && index + 3 < code.size()
+                        && code.get(index - 2).getOpcode() == Opcode.INVOKE_VIRTUAL
+                        && reference(code.get(index - 2)).equals("Lcom/spotify/scrollsita/v1/Section;->o0()Z")
+                        && code.get(index - 1).getOpcode() == Opcode.MOVE_RESULT
+                        && code.get(index).getOpcode() == Opcode.INVOKE_STATIC_RANGE
+                        && code.get(index) instanceof RegisterRangeInstruction call
+                        && call.getRegisterCount() == 1
+                        && call.getStartRegister() == ((OneRegisterInstruction) code.get(index - 1)).getRegisterA()
+                        && code.get(index + 1).getOpcode() == Opcode.MOVE_RESULT
+                        && ((OneRegisterInstruction) code.get(index + 1)).getRegisterA() == call.getStartRegister()
+                        && code.get(index + 3).getOpcode() == Opcode.IF_EQZ
+                        && ((OneRegisterInstruction) code.get(index + 3)).getRegisterA() == call.getStartRegister(),
+                        "Player-ad hook must feed the image-brand-ad null branch");
+            }
+        }
+        require(hooks == (enabled ? 1 : 0), "Missing or duplicate player-ad hook");
+        require(enabled ? capabilities == 1 : capabilities <= 1, "Missing or duplicate player-ad capability");
+    }
+
+    static void verifyHelper(Map<String, ClassDef> patched, ZipFile bundle, String type, boolean enabled) throws Exception {
+        if (!patched.containsKey(type)) {
+            require(!enabled, "Missing ad helper: " + type);
+            return;
+        }
+        var entry = bundle.getEntry("extensions/spotify.mpe");
+        require(entry != null, "Bundle lacks the extension");
+        try (var input = bundle.getInputStream(entry)) {
+            var dex = new DexBackedDexFile(Opcodes.forApi(35), ByteBuffer.wrap(input.readAllBytes()));
+            var expected = dex.getClasses().stream().filter(c -> c.getType().equals(type)).findFirst().orElseThrow();
+            require(Arrays.equals(canonical(expected), canonical(patched.get(type))), "Ad helper differs from bundle: " + type);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-        require(args.length == 4 && Set.of("0", "1").contains(args[3]),
-                "Usage: VerifyAdsDex.java STOCK PATCHED BUNDLE BRAND_ADS_ENABLED");
+        require(args.length == 5 && Set.of("0", "1").contains(args[3]) && Set.of("0", "1").contains(args[4]),
+                "Usage: VerifyAdsDex.java STOCK PATCHED BUNDLE BRAND_ADS_ENABLED PLAYER_ADS_ENABLED");
         var stock = load(args[0]);
         var patched = load(args[1]);
         boolean enabled = args[3].equals("1");
+        boolean playerEnabled = args[4].equals("1");
         verifyHooks(patched.values(), enabled);
+        verifyPlayerHooks(patched.values(), playerEnabled);
         for (var type : MODELS) require(Arrays.equals(canonical(stock.get(type)), canonical(patched.get(type))),
                 "Brand-ad model or protobuf list changed: " + type);
-        if (patched.containsKey(HELPER)) {
-            try (var bundle = new ZipFile(args[2])) {
-                var entry = bundle.getEntry("extensions/spotify.mpe");
-                require(entry != null, "Bundle lacks the extension");
-                try (var input = bundle.getInputStream(entry)) {
-                    var dex = new DexBackedDexFile(Opcodes.forApi(35), ByteBuffer.wrap(input.readAllBytes()));
-                    var expected = dex.getClasses().stream().filter(c -> c.getType().equals(HELPER)).findFirst().orElseThrow();
-                    require(Arrays.equals(canonical(expected), canonical(patched.get(HELPER))), "Brand-ad helper differs from bundle");
-                }
-            }
-        } else require(!enabled, "Missing brand-ad helper");
-        System.out.println("Brand ads verified: selected=" + enabled + ", native models unchanged");
+        for (var type : PLAYER_MODELS) require(Arrays.equals(canonical(stock.get(type)), canonical(patched.get(type))),
+                "Player-ad model changed: " + type);
+        try (var bundle = new ZipFile(args[2])) {
+            verifyHelper(patched, bundle, HELPER, enabled);
+            verifyHelper(patched, bundle, PLAYER_HELPER, playerEnabled);
+        }
+        System.out.println("Brand ads verified: selected=" + enabled + ", player ads=" + playerEnabled
+                + ", native models unchanged");
     }
 }

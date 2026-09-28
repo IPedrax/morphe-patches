@@ -78,6 +78,13 @@ public final class SpicetifySettingsActivity extends Activity {
                     + "Restart Spotify after changing this. Audio ads, player ads, and upgrade prompts are unchanged.", false));
         }
 
+        if (InstalledPatches.hidePlayerAdCards()) {
+            addSwitch(content, "Hide player ad cards", PatchSettings.hidePlayerAdCardsEnabled(),
+                    (button, enabled) -> PatchSettings.setHidePlayerAdCardsEnabled(enabled));
+            content.addView(text("Hide image brand-ad cards in Now Playing. "
+                    + "Restart Spotify after changing this. Audio ads and other player overlays are unchanged.", false));
+        }
+
         if (InstalledPatches.homePins()) {
             content.addView(text("Home shortcuts", true));
             content.addView(text("Choose which shortcuts appear first when Spotify includes them on Home. "
@@ -93,7 +100,8 @@ public final class SpicetifySettingsActivity extends Activity {
         }
 
         if (!sharingInstalled && !themeInstalled && !InstalledPatches.homePins()
-                && !InstalledPatches.serverFiles() && !InstalledPatches.hidePremiumTab() && !InstalledPatches.hideBrandAds()) {
+                && !InstalledPatches.serverFiles() && !InstalledPatches.hidePremiumTab()
+                && !InstalledPatches.hideBrandAds() && !InstalledPatches.hidePlayerAdCards()) {
             content.addView(text("No configurable Spicetify patches are installed.", false));
         }
         setContentView(scroll);
