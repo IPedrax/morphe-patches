@@ -11,12 +11,14 @@ public final class ServerIndex {
         final ServerConfig.Snapshot snapshot;
         final List<RemoteTrack> tracks;
         final Map<String, RemoteTrack> byId;
+        final MusicCatalog catalog;
         Index(ServerConfig.Snapshot snapshot, List<RemoteTrack> tracks) {
             this.snapshot = snapshot;
             this.tracks = Collections.unmodifiableList(new ArrayList<>(tracks));
             Map<String, RemoteTrack> ids = new HashMap<>();
             for (RemoteTrack track : tracks) ids.put(track.id, track);
             byId = Collections.unmodifiableMap(ids);
+            catalog = MusicCatalog.from(tracks);
         }
     }
     private static volatile String status = "Not scanned";
@@ -29,6 +31,15 @@ public final class ServerIndex {
 
     public static String status() { return ServerConfig.snapshot().enabled ? status : "Disabled"; }
     public static List<RemoteTrack> tracks() { return tracks(ServerConfig.snapshot()); }
+    public static MusicCatalog catalog() {
+        ServerConfig.Snapshot current = ServerConfig.snapshot();
+        Index saved = index;
+        return saved.snapshot == current && ServerConfig.isCurrent(current) ? saved.catalog : MusicCatalog.empty();
+    }
+    public static boolean isCurrent(MusicCatalog catalog) {
+        Index saved = index;
+        return saved.catalog == catalog && saved.snapshot != null && ServerConfig.isCurrent(saved.snapshot);
+    }
     static List<RemoteTrack> tracks(ServerConfig.Snapshot snapshot) {
         Index saved = index;
         return saved.snapshot == snapshot && ServerConfig.isCurrent(snapshot) ? saved.tracks : Collections.emptyList();
@@ -85,9 +96,10 @@ public final class ServerIndex {
             }
             if (Thread.currentThread().isInterrupted()) return;
             int skippedTracks = skipped;
+            Index completedIndex = new Index(snapshot, completed);
             ServerConfig.publish(snapshot, () -> {
                 if (generation == scanId) {
-                    index = new Index(snapshot, completed);
+                    index = completedIndex;
                     status = "Tracks ready: " + completed.size() + (skippedTracks == 0 ? "" : " (" + skippedTracks + " skipped)");
                     LocalServerHook.requestRescan();
                 }
@@ -111,7 +123,17 @@ public final class ServerIndex {
             int seconds = duration == null ? 0 : (int) Math.min(Integer.MAX_VALUE, Long.parseLong(duration) / 1000L);
             return track.withMetadata(snapshot.connection(), retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
                     retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM),
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST), seconds);
+                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),
+                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
+                    tagNumber(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DISC_NUMBER)),
+                    tagNumber(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER)), seconds);
         } finally { retriever.release(); }
+    }
+
+    private static int tagNumber(String value) {
+        if (value == null) return 0;
+        String first = value.split("/", 2)[0].trim();
+        try { return Math.max(0, Math.min(10000, Integer.parseInt(first))); }
+        catch (NumberFormatException invalid) { return 0; }
     }
 }

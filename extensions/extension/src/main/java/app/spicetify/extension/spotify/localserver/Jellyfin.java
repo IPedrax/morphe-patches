@@ -98,7 +98,42 @@ final class Jellyfin implements ProviderSession {
         }
         int duration = item.isNull("RunTimeTicks") ? 0
                 : (int) Math.min(Integer.MAX_VALUE, longInteger(item, "RunTimeTicks", 0, Long.MAX_VALUE) / 10000000L);
-        return new RemoteTrack(config, stream, itemId, sourceId, size, text(selected, "ETag"), container, title, album, artist.toString(), duration);
+        List<BrowseMetadata.ArtistCredit> artistsWithIds = credits(item, "ArtistItems");
+        if (artistsWithIds.isEmpty() && artists != null) {
+            for (int i = 0; i < artists.length(); i++)
+                artistsWithIds.add(new BrowseMetadata.ArtistCredit("", bounded(artists.getString(i))));
+        }
+        List<BrowseMetadata.ArtistCredit> albumArtists = credits(item, "AlbumArtists");
+        String albumArtist = shortText(item, "AlbumArtist");
+        if (albumArtist.isEmpty() && !albumArtists.isEmpty()) albumArtist = albumArtists.get(0).name;
+        if (albumArtist.isEmpty() && !artistsWithIds.isEmpty()) albumArtist = artistsWithIds.get(0).name;
+        BrowseMetadata browse = new BrowseMetadata(optionalId(item, "AlbumId"), optionalId(item, "ParentId"),
+                albumArtist, shortText(item, "AlbumPrimaryImageTag"), artistsWithIds, albumArtists,
+                optionalIndex(item, "ParentIndexNumber"), optionalIndex(item, "IndexNumber"));
+        return new RemoteTrack(config, stream, itemId, sourceId, size, text(selected, "ETag"), container,
+                title, album, artist.toString(), duration, browse);
+    }
+    private static List<BrowseMetadata.ArtistCredit> credits(JSONObject item, String key) throws JSONException, IOException {
+        List<BrowseMetadata.ArtistCredit> result = new ArrayList<>();
+        if (item.isNull(key)) return result;
+        JSONArray values = item.getJSONArray(key);
+        if (values.length() > 100) throw new IOException("A track has too many artist credits.");
+        for (int i = 0; i < values.length(); i++) {
+            JSONObject value = values.getJSONObject(i);
+            String name = shortText(value, "Name");
+            if (!name.isEmpty()) result.add(new BrowseMetadata.ArtistCredit(optionalId(value, "Id"), name));
+        }
+        return result;
+    }
+    private static String optionalId(JSONObject item, String key) throws JSONException, IOException {
+        if (item.isNull(key)) return "";
+        Object value = item.get(key);
+        if (!(value instanceof String)) throw new IOException("Jellyfin returned an invalid music item ID.");
+        if (((String) value).isEmpty()) return "";
+        return JellyfinClient.id((String) value);
+    }
+    private static int optionalIndex(JSONObject item, String key) throws JSONException, IOException {
+        return item.isNull(key) ? 0 : integer(item, key, 0, 10000);
     }
     private static String text(JSONObject object, String key) throws JSONException, IOException {
         if (object.isNull(key)) return "";
@@ -106,6 +141,10 @@ final class Jellyfin implements ProviderSession {
         if (!(value instanceof String) || ((String) value).length() > 16384) throw new IOException("Jellyfin returned invalid text metadata.");
         return (String) value;
     }
+    private static String shortText(JSONObject object, String key) throws JSONException, IOException {
+        return bounded(text(object, key));
+    }
+    private static String bounded(String value) { return value.substring(0, Math.min(value.length(), 512)); }
     private static int integer(JSONObject object, String key, int min, int max) throws JSONException, IOException {
         return (int) longInteger(object, key, min, max);
     }

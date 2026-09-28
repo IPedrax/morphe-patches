@@ -126,6 +126,25 @@ public class JellyfinTest {
         assertTrue(track.url.getRawQuery().contains("mediaSourceId=different-source"));
         assertFalse(track.url.toString().contains("fixture-token"));
     }
+    @Test public void retainsAlbumArtistAndTrackOrderFromAudioItems() throws Exception {
+        JellyfinConnection connection = connection();
+        String albumId = "11111111111111111111111111111111";
+        String artistId = "22222222222222222222222222222222";
+        String enriched = item(ITEM).replace("\"MediaSources\":", "\"AlbumId\":\"" + albumId
+                + "\",\"ParentId\":\"" + albumId + "\",\"AlbumArtist\":\"Band\","
+                + "\"ArtistItems\":[{\"Id\":\"" + artistId + "\",\"Name\":\"Artist\"}],"
+                + "\"AlbumArtists\":[{\"Id\":\"" + artistId + "\",\"Name\":\"Band\"}],"
+                + "\"ParentIndexNumber\":2,\"IndexNumber\":4,\"AlbumPrimaryImageTag\":\"image-v1\","
+                + "\"MediaSources\":");
+        server.handler = request -> page(enriched, 0, 1);
+        RemoteTrack track = new Jellyfin(connection, active::get).scan().get(0);
+        assertEquals(albumId, track.browse.albumId);
+        assertEquals("Band", track.browse.albumArtist);
+        assertEquals(artistId, track.browse.artists.get(0).id);
+        assertEquals(2, track.browse.discNumber);
+        assertEquals(4, track.browse.trackNumber);
+        assertEquals("image-v1", track.browse.albumImageTag);
+    }
     @Test public void indexUsesJellyfinMetadataWithoutOpeningEveryFileAndReportsExpiredSession() throws Exception {
         Application app = RuntimeEnvironment.getApplication();
         Field saved = ServerConfig.class.getDeclaredField("preferences");
@@ -146,13 +165,19 @@ public class JellyfinTest {
             assertEquals(1, server.requests.get());
             assertEquals(1, ServerIndex.tracks().size());
             assertEquals("Track", ServerIndex.tracks().get(0).title);
+            MusicCatalog catalog = ServerIndex.catalog();
+            assertEquals(1, catalog.trackCount());
+            assertTrue(ServerIndex.isCurrent(catalog));
             assertEquals("Tracks ready: 1 (1 skipped)", ServerIndex.status());
 
             server.handler = request -> new Response(401, "{}", Map.of());
             ServerIndex.scanAsync();
             waitForStatus("Jellyfin sign-in expired");
             assertEquals(2, server.requests.get());
-        } finally { ServerConfig.forget(); }
+        } finally {
+            ServerConfig.forget();
+            assertEquals(0, ServerIndex.catalog().trackCount());
+        }
     }
     private static void waitForStatus(String prefix) throws InterruptedException {
         long deadline = System.nanoTime() + 5_000_000_000L;

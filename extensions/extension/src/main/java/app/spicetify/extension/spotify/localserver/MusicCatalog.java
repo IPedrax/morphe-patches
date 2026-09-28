@@ -1,0 +1,210 @@
+package app.spicetify.extension.spotify.localserver;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/** Immutable browse view of one completed server scan. No network or Android state lives here. */
+public final class MusicCatalog {
+    public static final class Track {
+        public final String id, title, album, artist;
+        public final int durationSeconds, discNumber, trackNumber;
+
+        private Track(RemoteTrack source) {
+            id = source.id;
+            title = source.displayTitle();
+            album = source.album;
+            artist = source.artist;
+            durationSeconds = source.durationSeconds;
+            discNumber = source.browse.discNumber;
+            trackNumber = source.browse.trackNumber;
+        }
+    }
+
+    public static final class Album {
+        public final String id, title, artist;
+        public final List<Track> tracks;
+
+        private Album(String id, String title, String artist, List<Track> tracks) {
+            this.id = id;
+            this.title = title;
+            this.artist = artist;
+            this.tracks = Collections.unmodifiableList(new ArrayList<>(tracks));
+        }
+    }
+
+    public static final class Artist {
+        public final String id, name;
+        public final List<String> albumIds;
+        public final List<String> trackIds;
+
+        private Artist(String id, String name, LinkedHashSet<String> albumIds, LinkedHashSet<String> trackIds) {
+            this.id = id;
+            this.name = name;
+            this.albumIds = Collections.unmodifiableList(new ArrayList<>(albumIds));
+            this.trackIds = Collections.unmodifiableList(new ArrayList<>(trackIds));
+        }
+    }
+
+    public static final class SearchResults {
+        public final List<Artist> artists;
+        public final List<Album> albums;
+        public final List<Track> tracks;
+
+        private SearchResults(List<Artist> artists, List<Album> albums, List<Track> tracks) {
+            this.artists = Collections.unmodifiableList(artists);
+            this.albums = Collections.unmodifiableList(albums);
+            this.tracks = Collections.unmodifiableList(tracks);
+        }
+    }
+
+    private static final class AlbumBuilder {
+        final String id, title, artist;
+        final List<Track> tracks = new ArrayList<>();
+
+        AlbumBuilder(String id, String title, String artist) {
+            this.id = id; this.title = title; this.artist = artist;
+        }
+    }
+
+    private static final class ArtistBuilder {
+        final String id, name;
+        final LinkedHashSet<String> albumIds = new LinkedHashSet<>();
+        final LinkedHashSet<String> trackIds = new LinkedHashSet<>();
+
+        ArtistBuilder(String id, String name) { this.id = id; this.name = name; }
+    }
+
+    private final List<Album> albums;
+    private final List<Artist> artists;
+    private final List<Track> tracks;
+    private final Map<String, Album> albumsById;
+    private final Map<String, Artist> artistsById;
+
+    private MusicCatalog(List<Album> albums, List<Artist> artists, List<Track> tracks) {
+        this.albums = Collections.unmodifiableList(albums);
+        this.artists = Collections.unmodifiableList(artists);
+        this.tracks = Collections.unmodifiableList(tracks);
+        Map<String, Album> byAlbum = new HashMap<>();
+        for (Album album : albums) byAlbum.put(album.id, album);
+        albumsById = Collections.unmodifiableMap(byAlbum);
+        Map<String, Artist> byArtist = new HashMap<>();
+        for (Artist artist : artists) byArtist.put(artist.id, artist);
+        artistsById = Collections.unmodifiableMap(byArtist);
+    }
+
+    static MusicCatalog empty() {
+        return new MusicCatalog(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+    }
+
+    static MusicCatalog from(List<RemoteTrack> sources) {
+        Map<String, AlbumBuilder> albumBuilders = new LinkedHashMap<>();
+        Map<String, ArtistBuilder> artistBuilders = new LinkedHashMap<>();
+        List<Track> tracks = new ArrayList<>(sources.size());
+        for (RemoteTrack source : sources) {
+            Track track = new Track(source);
+            tracks.add(track);
+            String albumId = albumId(source);
+            String albumTitle = source.album.isEmpty() ? "Unknown album" : source.album;
+            String albumArtist = source.browse.albumArtist.isEmpty() ? source.artist : source.browse.albumArtist;
+            AlbumBuilder album = albumBuilders.computeIfAbsent(albumId,
+                    ignored -> new AlbumBuilder(albumId, albumTitle, albumArtist));
+            album.tracks.add(track);
+
+            List<BrowseMetadata.ArtistCredit> credits = source.browse.artists;
+            if (credits.isEmpty() && !source.artist.isEmpty())
+                credits = Collections.singletonList(new BrowseMetadata.ArtistCredit("", source.artist));
+            if (credits.isEmpty())
+                credits = Collections.singletonList(new BrowseMetadata.ArtistCredit("", "Unknown artist"));
+            for (BrowseMetadata.ArtistCredit credit : credits) {
+                ArtistBuilder artist = artist(artistBuilders, credit);
+                artist.trackIds.add(track.id);
+            }
+            List<BrowseMetadata.ArtistCredit> albumCredits = source.browse.albumArtists;
+            if (albumCredits.isEmpty() && !albumArtist.isEmpty())
+                albumCredits = Collections.singletonList(new BrowseMetadata.ArtistCredit("", albumArtist));
+            for (BrowseMetadata.ArtistCredit credit : albumCredits) {
+                ArtistBuilder artist = artist(artistBuilders, credit);
+                artist.albumIds.add(albumId);
+                artist.trackIds.add(track.id);
+            }
+        }
+
+        Comparator<Track> albumOrder = Comparator
+                .comparingInt((Track track) -> knownOrder(track.discNumber))
+                .thenComparingInt(track -> knownOrder(track.trackNumber))
+                .thenComparing(track -> folded(track.title))
+                .thenComparing(track -> track.id);
+        List<Album> albums = new ArrayList<>(albumBuilders.size());
+        for (AlbumBuilder value : albumBuilders.values()) {
+            value.tracks.sort(albumOrder);
+            albums.add(new Album(value.id, value.title, value.artist, value.tracks));
+        }
+        albums.sort(Comparator.comparing((Album album) -> folded(album.title))
+                .thenComparing(album -> folded(album.artist)).thenComparing(album -> album.id));
+        List<Artist> artists = new ArrayList<>(artistBuilders.size());
+        for (ArtistBuilder value : artistBuilders.values())
+            artists.add(new Artist(value.id, value.name, value.albumIds, value.trackIds));
+        artists.sort(Comparator.comparing((Artist artist) -> folded(artist.name)).thenComparing(artist -> artist.id));
+        tracks.sort(Comparator.comparing((Track track) -> folded(track.title)).thenComparing(track -> track.id));
+        return new MusicCatalog(albums, artists, tracks);
+    }
+
+    private static ArtistBuilder artist(Map<String, ArtistBuilder> artists, BrowseMetadata.ArtistCredit credit) {
+        String name = credit.name.isEmpty() ? "Unknown artist" : credit.name;
+        String id = credit.id.isEmpty() ? "name:" + folded(name) : "id:" + credit.id;
+        return artists.computeIfAbsent(id, ignored -> new ArtistBuilder(id, name));
+    }
+
+    private static String albumId(RemoteTrack track) {
+        if (!track.browse.albumId.isEmpty()) return "id:" + track.browse.albumId;
+        if (!track.browse.parentId.isEmpty()) return "parent:" + track.browse.parentId
+                + "\n" + folded(track.album) + "\n" + folded(track.browse.albumArtist);
+        if (track.providerIdentity != null) return "unidentified:" + track.id;
+        String path = track.url.getPath();
+        String folder = path.substring(0, path.lastIndexOf('/') + 1);
+        return "folder:" + folder + "\n" + folded(track.album) + "\n" + folded(track.browse.albumArtist);
+    }
+
+    private static int knownOrder(int value) { return value == 0 ? Integer.MAX_VALUE : value; }
+    private static String folded(String value) { return value.toLowerCase(Locale.ROOT).trim(); }
+
+    public int trackCount() { return tracks.size(); }
+    public int albumCount() { return albums.size(); }
+    public int artistCount() { return artists.size(); }
+    public Album album(String id) { return albumsById.get(id); }
+    public Artist artist(String id) { return artistsById.get(id); }
+    public List<Album> albums(int offset, int limit) { return page(albums, offset, limit); }
+    public List<Artist> artists(int offset, int limit) { return page(artists, offset, limit); }
+    public List<Track> songs(int offset, int limit) { return page(tracks, offset, limit); }
+
+    public SearchResults search(String query, int limit) {
+        if (limit < 1 || limit > 100) throw new IllegalArgumentException("Search page size must be 1 to 100.");
+        String needle = folded(query);
+        if (needle.isEmpty()) return new SearchResults(Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+        List<Artist> artistMatches = new ArrayList<>();
+        List<Album> albumMatches = new ArrayList<>();
+        List<Track> trackMatches = new ArrayList<>();
+        for (Artist artist : artists)
+            if (artistMatches.size() < limit && folded(artist.name).contains(needle)) artistMatches.add(artist);
+        for (Album album : albums)
+            if (albumMatches.size() < limit && (folded(album.title).contains(needle) || folded(album.artist).contains(needle)))
+                albumMatches.add(album);
+        for (Track track : tracks)
+            if (trackMatches.size() < limit && (folded(track.title).contains(needle) || folded(track.artist).contains(needle)))
+                trackMatches.add(track);
+        return new SearchResults(artistMatches, albumMatches, trackMatches);
+    }
+
+    private static <T> List<T> page(List<T> values, int offset, int limit) {
+        if (offset < 0 || limit < 1 || limit > 100) throw new IllegalArgumentException("Invalid catalog page.");
+        if (offset >= values.size()) return Collections.emptyList();
+        return values.subList(offset, Math.min(values.size(), offset + limit));
+    }
+}

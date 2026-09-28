@@ -15,13 +15,14 @@ public final class RemoteTrack {
     public final int durationSeconds;
     public final String id;
     final String providerIdentity;
+    final BrowseMetadata browse;
 
     RemoteTrack(ServerConnection connection, URI url, long size, String etag) {
-        this(connection, url, size, etag, "", "", "", 0);
+        this(connection, url, size, etag, "", "", "", 0, BrowseMetadata.empty());
     }
 
     private RemoteTrack(ServerConnection connection, URI url, long size, String etag,
-            String title, String album, String artist, int durationSeconds) {
+            String title, String album, String artist, int durationSeconds, BrowseMetadata browse) {
         if (size <= 0 || size > 2L * 1024 * 1024 * 1024) throw new IllegalArgumentException("Unsupported audio file size.");
         this.providerIdentity = null;
         this.url = connection.resolve(connection.root, url.toASCIIString());
@@ -32,17 +33,24 @@ public final class RemoteTrack {
         this.album = album;
         this.artist = artist;
         this.durationSeconds = durationSeconds;
+        this.browse = browse;
         id = hash(connection.root + "\n" + connection.username + "\n" + url + "\n" + size + "\n" + etag);
     }
 
     RemoteTrack(JellyfinConnection connection, URI url, String itemId, String sourceId, long size, String version,
             String container, String title, String album, String artist, int duration) {
+        this(connection, url, itemId, sourceId, size, version, container, title, album, artist, duration, BrowseMetadata.empty());
+    }
+
+    RemoteTrack(JellyfinConnection connection, URI url, String itemId, String sourceId, long size, String version,
+            String container, String title, String album, String artist, int duration, BrowseMetadata browse) {
         if (size <= 0 || size > 2L * 1024 * 1024 * 1024) throw new IllegalArgumentException("Unsupported audio file size.");
         this.providerIdentity = connection.identity();
         this.url = url; this.size = size; this.etag = null;
         this.title = bounded(title); this.album = bounded(album); this.artist = bounded(artist);
         this.name = (this.title.isEmpty() ? itemId : this.title.replace('/', '_').replace('\\', '_')) + "." + container;
         this.durationSeconds = Math.max(0, duration);
+        this.browse = browse;
         id = hash(providerIdentity + "\n" + itemId + "\n" + sourceId + "\n" + size + "\n" + version);
     }
     private static String hash(String value) {
@@ -55,7 +63,12 @@ public final class RemoteTrack {
     }
 
     RemoteTrack withMetadata(ServerConnection connection, String title, String album, String artist, int duration) {
-        return new RemoteTrack(connection, url, size, etag, bounded(title), bounded(album), bounded(artist), Math.max(0, duration));
+        return withMetadata(connection, title, album, artist, "", 0, 0, duration);
+    }
+    RemoteTrack withMetadata(ServerConnection connection, String title, String album, String artist,
+            String albumArtist, int discNumber, int trackNumber, int duration) {
+        return new RemoteTrack(connection, url, size, etag, bounded(title), bounded(album), bounded(artist),
+                Math.max(0, duration), BrowseMetadata.webDav(bounded(artist), bounded(albumArtist), discNumber, trackNumber));
     }
     private static String bounded(String value) { return value == null ? "" : value.substring(0, Math.min(value.length(), 512)); }
     public String displayTitle() {
