@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 final class ServerFilesSettings extends LinearLayout {
+    private static final int QUICK_CONNECT_WAIT_MINUTES = 9;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService requests = Executors.newSingleThreadExecutor();
     private Future<?> pending;
@@ -217,11 +218,11 @@ final class ServerFilesSettings extends LinearLayout {
             try {
                 JellyfinClient.Challenge challenge = client.initiateQuickConnect();
                 post(attempt, expected, () -> {
-                    code.setText("Code: " + challenge.code + "\nOn a device already signed in to Jellyfin, open Quick Connect and approve this code. This screen checks for approval for three minutes.");
+                    code.setText("Code: " + challenge.code + "\nOn a device already signed in to Jellyfin, open Quick Connect and approve this code. This screen checks for approval for up to " + QUICK_CONNECT_WAIT_MINUTES + " minutes.");
                     operationStatus = "Waiting for approval in Jellyfin…";
                     showStatus();
                 });
-                long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(3);
+                long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(QUICK_CONNECT_WAIT_MINUTES);
                 while (live(attempt, expected)) {
                     long remaining = deadline - System.nanoTime();
                     if (remaining <= 0) break;

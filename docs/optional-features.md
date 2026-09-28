@@ -74,8 +74,10 @@ the displayed Quick Connect code in a browser already signed in to Jellyfin.
 You can omit `https://` from the URL; an explicit `http://` URL is rejected.
 You can use the password sign-in control if Quick Connect is unavailable.
 Choose a music library, enable **Use server files**, then select **Save
-library and scan**. A code expires after three minutes;
-start Quick Connect again if the screen reports expiry.
+library and scan**. The app waits up to nine minutes for approval; Jellyfin
+expires an unapproved code after ten minutes in its current
+[Quick Connect implementation](https://github.com/jellyfin/jellyfin/blob/master/Emby.Server.Implementations/QuickConnect/QuickConnectManager.cs).
+Start Quick Connect again if the screen reports expiry.
 
 Jellyfin indexing supports up to 50,000 items and reports how many items were
 processed and skipped. The direct stream must support exact HTTP byte ranges.
