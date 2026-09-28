@@ -35,3 +35,13 @@ query. These adaptations were made on September 17, 2026.
 
 No code from binary-only candidates was imported. Spotify APKs and other
 proprietary assets are excluded.
+
+## APK reverse engineering skill
+
+`.agents/skills/apk-reverse` contains the skill directory from
+[newliver666/apk-reverse](https://github.com/newliver666/apk-reverse/tree/7b6c6932a95f03d778e81e5e1a2cbf6f62dc97fd)
+at `7b6c6932a95f03d778e81e5e1a2cbf6f62dc97fd`, under the MIT license.
+The upstream copyright and license are retained in the skill's
+[LICENSE](.agents/skills/apk-reverse/LICENSE). The imported files are unchanged;
+`UPSTREAM.json` records their provenance. This development tool is separate
+from the patch bundle and Android extension.

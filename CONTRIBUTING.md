@@ -9,6 +9,32 @@ For settings and server changes, use the
 [standalone development app](docs/development-app.md) to test the shared
 extension code without rebuilding Spotify or downloading Morphe packages.
 
+## APK analysis skill
+
+The repository includes a pinned [apk-reverse skill](.agents/skills/apk-reverse/SKILL.md)
+for APK inspection, DEX comparisons, and repack diagnostics. Codex can discover
+it from `.agents/skills` on your next turn. Its source revision is recorded in
+[UPSTREAM.json](.agents/skills/apk-reverse/UPSTREAM.json).
+
+Use Python 3.10 or later. This pinned version's doctor uses
+`sys.stdlib_module_names`, which is unavailable in Python 3.9 despite the
+upstream compatibility claim. Check the tools from the repository root with
+your compatible interpreter, for example:
+
+```sh
+python3.11 .agents/skills/apk-reverse/scripts/doctor.py --json
+```
+
+For a connected device, add `--device YOUR_DEVICE_SERIAL` to select it
+explicitly. The doctor reads device state when ADB is available. If your
+tools are outside `PATH`, set `APKREV_TOOLS` to their directories, separated
+by `:` on macOS and Linux or `;` on Windows. Exit code 3 means an optional
+capability lacks a dependency; read the report for the specific capability.
+
+Use this skill alongside the Morphe workflow below. Production patches remain
+Morphe source, and the repository's artifact and device checks still apply.
+Keep APKs, signing material, and device reports outside the tracked files.
+
 ## Build and test
 
 Use Java 21 and an Android SDK. Set `JAVA_HOME` and `ANDROID_HOME` to their

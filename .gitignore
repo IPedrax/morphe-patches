@@ -136,3 +136,7 @@ local.properties
 *.jks
 .morphe-data/
 .worktrees/
+
+# Local caches from the APK analysis skill
+.agents/skills/**/__pycache__/
+.agents/skills/**/*.pyc
