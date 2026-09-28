@@ -2,6 +2,12 @@ package app.spicetify.extension.spotify.localserver;
 
 import static org.junit.Assert.*;
 import android.app.Application;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.TextView;
+import app.spicetify.extension.spotify.settings.ServerMusicActivity;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.net.*;
@@ -12,6 +18,7 @@ import org.json.*;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
@@ -170,6 +177,33 @@ public class JellyfinTest {
             assertTrue(ServerIndex.isCurrent(catalog));
             assertEquals("Tracks ready: 1 · Albums: 1 · Artists: 1 (1 skipped)", ServerIndex.status());
 
+            var browser = Robolectric.buildActivity(ServerMusicActivity.class).create().start().resume();
+            try {
+                ServerMusicActivity activity = browser.get();
+                View root = activity.findViewById(android.R.id.content);
+                ListView list = findView(root, ListView.class);
+                assertEquals(1, list.getAdapter().getCount());
+                View albumRow = list.getAdapter().getView(0, null, list);
+                assertEquals("Album", ((TextView) ((ViewGroup) albumRow).getChildAt(0)).getText());
+                list.performItemClick(list.getAdapter().getView(0, null, list), 0, 0);
+                assertNotNull(findText(root, "Album · 1 of 1"));
+                assertEquals("Track", ((TextView) ((ViewGroup) list.getAdapter().getView(0, null, list))
+                        .getChildAt(0)).getText());
+                findText(root, "Artists").performClick();
+                assertEquals(1, list.getAdapter().getCount());
+                assertNotNull(findText(root, "Artists · 1 of 1"));
+                list.performItemClick(list.getAdapter().getView(0, null, list), 0, 0);
+                assertNotNull(findText(root, "Artist · 1 of 1"));
+                assertEquals("Album", ((TextView) ((ViewGroup) list.getAdapter().getView(0, null, list))
+                        .getChildAt(0)).getText());
+                findText(root, "Search").performClick();
+                findView(root, EditText.class).setText("track");
+                assertEquals(1, list.getAdapter().getCount());
+                assertNotNull(findText(root, "Search · 1 results shown"));
+            } finally {
+                browser.pause().stop().destroy();
+            }
+
             server.handler = request -> new Response(401, "{}", Map.of());
             ServerIndex.scanAsync();
             waitForStatus("Jellyfin sign-in expired");
@@ -178,6 +212,28 @@ public class JellyfinTest {
             ServerConfig.forget();
             assertEquals(0, ServerIndex.catalog().trackCount());
         }
+    }
+
+    private static <T extends View> T findView(View root, Class<T> type) {
+        if (type.isInstance(root)) return type.cast(root);
+        if (root instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                T found = findView(group.getChildAt(i), type);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static TextView findText(View root, String text) {
+        if (root instanceof TextView label && label.getText().toString().contains(text)) return label;
+        if (root instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                TextView found = findText(group.getChildAt(i), text);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
     private static void waitForStatus(String prefix) throws InterruptedException {
         long deadline = System.nanoTime() + 5_000_000_000L;

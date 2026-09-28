@@ -231,7 +231,9 @@ public final class ServerMusicActivity extends Activity {
                     : rows.isEmpty() ? "No matches in this server library"
                     : "Search · " + rows.size() + " results shown");
         } else {
-            status.setText(location + " · " + (total == 0 ? "0" : (offset + 1) + "–" + (offset + rows.size()))
+            String shown = total == 0 ? "0" : rows.size() == 1 ? Integer.toString(offset + 1)
+                    : (offset + 1) + "–" + (offset + rows.size());
+            status.setText(location + " · " + shown
                     + " of " + total);
         }
         previous.setVisibility(offset > 0 && mode != ViewMode.SEARCH ? View.VISIBLE : View.INVISIBLE);
