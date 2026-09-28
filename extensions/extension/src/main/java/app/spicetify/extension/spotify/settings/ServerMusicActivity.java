@@ -85,6 +85,9 @@ public final class ServerMusicActivity extends Activity {
             getActionBar().setBackgroundDrawable(new ColorDrawable(SURFACE));
         }
         catalog = ServerIndex.catalog();
+        LinearLayout insetRoot = new LinearLayout(this);
+        insetRoot.setFitsSystemWindows(true);
+        insetRoot.setBackgroundColor(SURFACE);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(SURFACE);
@@ -146,7 +149,9 @@ public final class ServerMusicActivity extends Activity {
         guidance.setTextSize(12);
         guidance.setPadding(dp(8), dp(8), dp(8), dp(8));
         root.addView(guidance);
-        setContentView(root);
+        insetRoot.addView(root, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(insetRoot);
         if (Build.VERSION.SDK_INT >= 33) backCallback = Api33.register(this);
         render();
     }
