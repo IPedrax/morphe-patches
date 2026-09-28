@@ -1203,3 +1203,9 @@ connectivity through a VPN during this check, but the September 18 VPN-off
 control above reproduced the album-loading failure. These observations do
 not isolate the network, account, APK signing, or a patch as the cause. Native
 music playback and a served-ad on/off comparison remain open.
+
+After a force-stop and normal launcher restart, Spotify still showed four
+navigation tabs. Opening **Settings and privacy > Spicetify** through the
+visible settings row showed both **Hide Home and Browse ads** and **Hide
+player ad cards** enabled. This verifies that the settings survived a process
+restart; no ad was served during this check.
