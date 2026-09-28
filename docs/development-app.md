@@ -6,7 +6,8 @@ preferences, server configuration, indexing, and file playback while editing
 the extension. You do not need Spotify APKs or GitHub Packages credentials.
 
 The app has its own preferences and server credentials. Its settings expose
-every installed-patch capability for development. Spotify navigation,
+every installed-patch capability for development, including the grouped
+server music browser. Spotify navigation,
 sharing, Home pins, ad filtering, and the Spotify playback hook still require
 a patched Spotify build. A successful preview here does not prove Spotify
 integration.
@@ -53,8 +54,10 @@ Start from the launcher to follow the same settings entry point each time:
 
    You can omit `https://` from either server URL. The app assumes HTTPS when
    no scheme is given and rejects an explicit `http://` URL.
-3. Wait for the scan result, then return to the launcher and select
-   **Refresh tracks**. The launcher shows up to 50 indexed tracks.
+3. Wait for the scan result. Select **Browse server music** in patch settings
+   to check Albums, Artists, Songs, Search, album order, and back navigation.
+   Return to the launcher and select **Refresh tracks** to see up to 50
+   indexed tracks.
 4. Select a track's **Play** button. Check audible playback, advancing time,
    **Seek forward 5 seconds**, completion, and **Stop playback**.
 5. Start playback again and leave the launcher. Playback must stop. Check
