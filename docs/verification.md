@@ -1320,11 +1320,10 @@ authorization. Google Play installed Spotify `9.1.86.2432` (version code
 and Spotify's original signing certificate. This stock installation remains
 on the Pixel; the seven-patch APK has not been restored.
 
-The owner later reported that Spotify was working after some time had passed.
-The report did not identify an album, track, or playback action. A read-only
-Android media-session check at that point showed Spotify in `NONE` with no
-track metadata. That check describes only the moment sampled and cannot
-contradict earlier playback.
+The owner later reported that Spotify was working after some time had passed,
+then clarified that only **Home** had loaded. No song or album playback was
+observed. A read-only Android media-session check at that point showed
+Spotify in `NONE` with no track metadata.
 
 Our repeat check on the official build found the active default network was
 Wi-Fi with no VPN transport. Spotify Home loaded recommendations, including
@@ -1333,14 +1332,14 @@ Wi-Fi with no VPN transport. Spotify Home loaded recommendations, including
 **Refresh** did not load its track list. The same album failed after a
 force-stop and cold-start. Opening **Daily Mix 5** from Home showed
 **Something went wrong** and **Try again**. A second Android media-session
-sample showed Spotify in `NONE`, with no track metadata. Neither this run
-nor the owner's report establishes audible playback on the newer build.
+sample showed Spotify in `NONE`, with no track metadata. No audible playback
+has been verified on the newer build.
 
 These observations rule out the seven patches and Morphe repackaging as
 necessary causes of the tested album and playlist errors. They do not prove
-a device rate limit or a permanent account restriction. The different Home
-and detail-page outcomes, together with the owner's report of recovery,
-leave an intermittent account, service, or network condition possible.
+a device rate limit or a permanent account restriction. Home loading did not
+establish that catalog browsing or playback recovered. An intermittent
+account, service, or network condition remains possible.
 
 The next visible-UI check opened **Late to Set** from a Home recommendation.
 Its cover art and controls loaded, but the track area remained on a loading
@@ -1353,8 +1352,6 @@ On restored Wi-Fi, Search for **Archangel Burial** displayed **Something
 went wrong** instead of song results. A process-scoped Android log sample
 contained no HTTP `401`, `403`, or `429` status; its two timeout matches
 came from Bluetooth logging. Absence of an HTTP status in those logs does
-not establish that Spotify received a successful response. This run did not
-reproduce the owner's reported recovery, and the precise successful action
-remains unknown. The broader catalog failure also occurs on the official
-build across both tested network routes, so patch changes are not a useful
-next diagnostic step.
+not establish that Spotify received a successful response. The broader
+catalog failure also occurs on the official build across both tested
+network routes, so patch changes are not a useful next diagnostic step.
