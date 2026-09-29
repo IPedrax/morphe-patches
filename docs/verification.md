@@ -1355,3 +1355,12 @@ came from Bluetooth logging. Absence of an HTTP status in those logs does
 not establish that Spotify received a successful response. The broader
 catalog failure also occurs on the official build across both tested
 network routes, so patch changes are not a useful next diagnostic step.
+
+### Free-account country change
+
+On September 29, 2026, the owner approved changing the Free account country
+from Portugal to Spain and signed in directly on Spotify's account page.
+The owner made the change. The signed-in **Edit profile** page then displayed
+**Profile saved**, with **Spain** selected as the account country. The Pixel
+still had the official Play Store build installed. A subsequent playback
+check remains pending while the phone completes Spotify's login flow.
