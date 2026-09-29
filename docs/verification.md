@@ -1209,3 +1209,36 @@ navigation tabs. Opening **Settings and privacy > Spicetify** through the
 visible settings row showed both **Hide Home and Browse ads** and **Hide
 player ad cards** enabled. This verifies that the settings survived a process
 restart; no ad was served during this check.
+
+### Album and playlist failure recheck
+
+On September 29, 2026, the Pixel still showed **The tracks on this release
+are not available** for the public **Untrue** album
+(`1oLxSFO8bJwsU2OmZY4cdU`) with the seven-patch APK installed. The
+installed SHA-256 matched the Manager export
+`18bd737054be208b4a587e2851eb1c766f848680c94430577897ef45b9147ec5`.
+The repeatable `scripts/device-check.py --album-id` run recorded
+`albumObservation: tracks-unavailable` and `playbackVerified: false`.
+Its `status: passed` means the observation procedure succeeded, not that
+the album worked.
+
+The saved `dev.1` Manager APK that played music on September 18 was
+temporarily reinstalled with the same signing key and retained account
+data. Its SHA-256 matched the original export
+`3e89dcc081a4da519821156734b54dba95851299e9bd156e728bffe4466d9653`.
+It now showed the same album error. The seven-patch APK was restored and its
+installed SHA-256 checked again. Reinstalling those same seven-patch bytes
+with Google Play recorded as Android's installer also left the album empty;
+the original null installer record was restored. These comparisons further
+weaken a later-patch regression or installer-source explanation.
+
+Spotify's own **Clear cache** action reduced its displayed cache from
+52.0 MB to 0.0 MB without removing downloads or signing out. The exact
+album still failed immediately afterward. A Free-account desktop session
+loaded all 13 tracks from **Untrue** and played **Archangel** through 0:18;
+**Daily Mix 2** showed 50 songs. The Pixel later displayed Daily Mix track
+rows, including the same first songs, but tapping its play control did not
+move Android's Spotify media session out of `NONE`. The phone's VPN was then
+turned off by the device owner, but its USB debugging connection dropped
+before the album and playback check could be repeated. Mobile session,
+network routing, and the shared repackaging path remain unresolved.
