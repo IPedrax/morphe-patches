@@ -1242,3 +1242,32 @@ move Android's Spotify media session out of `NONE`. The phone's VPN was then
 turned off by the device owner, but its USB debugging connection dropped
 before the album and playback check could be repeated. Mobile session,
 network routing, and the shared repackaging path remain unresolved.
+
+After USB reconnection, the Pixel's active network was Wi-Fi with no VPN
+transport. The same seven-patch APK again showed **The tracks on this release
+are not available** for **Untrue**. **Daily Mix 2** listed tracks, but tapping
+**Fight Test** left Android's Spotify media session in `NONE` with the track
+metadata set and no playback. The owner then signed directly into Spotify
+again after an in-app sign-out. The album still failed, and **Home** showed
+**Something went wrong** even after **Try again**. A Spotify-process error-log
+query returned no entries for that attempt.
+
+With the VPN still off, a brief cellular-only run used the same album and
+seven-patch APK. The album remained unavailable. Wi-Fi was restored and
+confirmed enabled. These checks rule out the active VPN, the tested Wi-Fi
+route, and the retained Spotify login as sufficient explanations for this
+failure. They do not establish whether account, device, or APK repackaging
+is responsible.
+
+The saved Fast no-op Morphe control APK matched its earlier SHA-256
+`21cf23773e2915f9256823b964fe0049092600ba8c7baa5f62fd1ff60896faa1`.
+A same-key update retained app data after the fresh sign-in. Its first album
+check showed a loading error, and the repeat check showed **The tracks on
+this release are not available**. The seven-patch APK was then restored by
+same-key update; its installed SHA-256 again matched
+`18bd737054be208b4a587e2851eb1c766f848680c94430577897ef45b9147ec5`.
+The no-op result isolates the failure from our seven patch implementations,
+but both APKs share Morphe's processing and signing path. A stock-signed
+control on this Pixel is still needed to separate that path from device or
+account behavior. Installing it requires removing the current APK and its
+local Spotify data because the signatures differ.
