@@ -18,7 +18,7 @@ class VerifyAdsDex {
     static final List<String> MODELS = List.of("Lp/ih40;",
             "Lcom/spotify/casita/v1/resolved/Section;", "Lcom/spotify/browsita/v1/resolved/Section;",
             "Lcom/spotify/casita/v1/resolved/HomeStructure;", "Lcom/spotify/browsita/v1/resolved/BrowseStructure;");
-    static final List<String> PLAYER_MODELS = List.of("Lcom/spotify/scrollsita/v1/Section;", "Lp/uti0;", "Lp/v7r;");
+    static final List<String> PLAYER_MODELS = List.of("Lcom/spotify/scrollsita/v1/Section;", "Lp/uti0;", "Lp/v7r;", "Lp/yit;");
 
     static void require(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
@@ -105,6 +105,7 @@ class VerifyAdsDex {
 
     static void verifyPlayerHooks(Collection<? extends ClassDef> classes, boolean enabled) {
         int hooks = 0;
+        int embeddedHooks = 0;
         int capabilities = 0;
         for (var cls : classes) for (var method : cls.getMethods()) {
             if (method.getImplementation() == null) continue;
@@ -124,6 +125,11 @@ class VerifyAdsDex {
                 if (!(code.get(index) instanceof ReferenceInstruction ref)
                         || !(ref.getReference() instanceof MethodReference target)
                         || !target.getDefiningClass().equals(PLAYER_HELPER) || cls.getType().equals(PLAYER_HELPER)) continue;
+                if (target.getName().equals("showEmbeddedAd")) {
+                    embeddedHooks++;
+                    require(enabled && isEmbeddedAdGuard(cls, method, code, index), "Embedded-ad hook must guard the Now Playing embedded-ad predicate");
+                    continue;
+                }
                 hooks++;
                 require(enabled && cls.getType().equals("Lp/ja31;") && method.getName().equals("invoke")
                         && method.getParameterTypes().equals(List.of("Ljava/lang/Object;"))
@@ -144,7 +150,63 @@ class VerifyAdsDex {
             }
         }
         require(hooks == (enabled ? 1 : 0), "Missing or duplicate player-ad hook");
+        require(embeddedHooks == (enabled ? 1 : 0), "Missing or duplicate embedded-ad hook");
         require(enabled ? capabilities == 1 : capabilities <= 1, "Missing or duplicate player-ad capability");
+    }
+
+    static boolean isEmbeddedAdGuard(ClassDef cls, Method method, List<Instruction> code, int index) {
+        if (!cls.getType().equals("Lp/onq;") || !method.getName().equals("z") || !method.getReturnType().equals("Z")
+                || !method.getParameterTypes().equals(List.of("Lcom/spotify/player/model/ContextTrack;"))
+                || index != 0 || code.size() < 6) return false;
+        if (code.get(0).getOpcode() != Opcode.INVOKE_STATIC || ((FiveRegisterInstruction) code.get(0)).getRegisterCount() != 0
+                || !reference(code.get(0)).equals(PLAYER_HELPER + "->showEmbeddedAd()Z")) return false;
+        if (code.get(1).getOpcode() != Opcode.MOVE_RESULT || code.get(2).getOpcode() != Opcode.IF_NEZ
+                || code.get(3).getOpcode() != Opcode.CONST_4 || code.get(4).getOpcode() != Opcode.RETURN) return false;
+        int register = ((OneRegisterInstruction) code.get(1)).getRegisterA();
+        for (int i = 2; i <= 4; i++) if (((OneRegisterInstruction) code.get(i)).getRegisterA() != register) return false;
+        if (((NarrowLiteralInstruction) code.get(3)).getNarrowLiteral() != 0) return false;
+        int guardUnits = 0;
+        for (int i = 2; i < 5; i++) guardUnits += code.get(i).getCodeUnits();
+        int parameters = AccessFlags.STATIC.isSet(method.getAccessFlags()) ? 0 : 1;
+        for (var type : method.getParameterTypes()) parameters += type.equals("J") || type.equals("D") ? 2 : 1;
+        return register < method.getImplementation().getRegisterCount() - parameters
+                && ((OffsetInstruction) code.get(2)).getCodeOffset() == guardUnits
+                && code.get(5).getOpcode() == Opcode.IGET_OBJECT
+                && ((TwoRegisterInstruction) code.get(5)).getRegisterA() == register
+                && reference(code.get(5)).equals("Lp/onq;->b:Ljava/lang/Object;");
+    }
+
+    static Method embeddedAdPredicate(ClassDef definition) {
+        require(definition != null, "Missing Lp/onq;");
+        for (var method : definition.getMethods()) {
+            if (method.getName().equals("z") && method.getReturnType().equals("Z")
+                    && method.getParameterTypes().equals(List.of("Lcom/spotify/player/model/ContextTrack;"))) return method;
+        }
+        throw new AssertionError("Missing embedded-ad predicate");
+    }
+
+    static List<String> describe(Iterable<? extends Instruction> instructions) {
+        var lines = new ArrayList<String>();
+        for (var instruction : instructions) {
+            var line = new StringBuilder(instruction.getOpcode().name);
+            if (instruction instanceof OneRegisterInstruction i) line.append(" a=").append(i.getRegisterA());
+            if (instruction instanceof TwoRegisterInstruction i) line.append(" b=").append(i.getRegisterB());
+            if (instruction instanceof ThreeRegisterInstruction i) line.append(" c=").append(i.getRegisterC());
+            if (instruction instanceof FiveRegisterInstruction i) line.append(" regs=").append(List.of(i.getRegisterCount(),
+                    i.getRegisterC(), i.getRegisterD(), i.getRegisterE(), i.getRegisterF(), i.getRegisterG()));
+            if (instruction instanceof RegisterRangeInstruction i) line.append(" range=").append(i.getStartRegister()).append('+').append(i.getRegisterCount());
+            if (instruction instanceof WideLiteralInstruction i) line.append(" literal=").append(i.getWideLiteral());
+            if (instruction instanceof OffsetInstruction i) line.append(" offset=").append(i.getCodeOffset());
+            line.append(' ').append(reference(instruction));
+            lines.add(line.toString());
+        }
+        return lines;
+    }
+
+    static void verifyEmbeddedAdBody(Map<String, ClassDef> stock, Map<String, ClassDef> patched, boolean enabled) {
+        var original = describe(embeddedAdPredicate(stock.get("Lp/onq;")).getImplementation().getInstructions());
+        var current = describe(embeddedAdPredicate(patched.get("Lp/onq;")).getImplementation().getInstructions());
+        require(current.subList(enabled ? 5 : 0, current.size()).equals(original), "Embedded-ad predicate body changed");
     }
 
     static void verifyHelper(Map<String, ClassDef> patched, ZipFile bundle, String type, boolean enabled) throws Exception {
@@ -172,6 +234,7 @@ class VerifyAdsDex {
         verifyPlayerHooks(patched.values(), playerEnabled);
         for (var type : MODELS) require(Arrays.equals(canonical(stock.get(type)), canonical(patched.get(type))),
                 "Brand-ad model or protobuf list changed: " + type);
+        verifyEmbeddedAdBody(stock, patched, playerEnabled);
         for (var type : PLAYER_MODELS) require(Arrays.equals(canonical(stock.get(type)), canonical(patched.get(type))),
                 "Player-ad model changed: " + type);
         try (var bundle = new ZipFile(args[2])) {

@@ -3,13 +3,16 @@ import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.immutable.*;
 import com.android.tools.smali.dexlib2.immutable.instruction.*;
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableFieldReference;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class VerifyAdsDexTest {
     enum Change { NONE, ARGUMENT, RESULT, GETTER, FILTER, ITERATOR, CALLER, MISSING, DUPLICATE, CAPABILITY }
-    enum PlayerChange { NONE, OPCODE, ARGUMENT, RESULT, BRANCH, GETTER, CAPABILITY, CAPABILITY_ACCESS }
+    enum PlayerChange { NONE, OPCODE, ARGUMENT, RESULT, BRANCH, GETTER, CAPABILITY, CAPABILITY_ACCESS,
+        EMBEDDED_MISSING, EMBEDDED_OWNER, EMBEDDED_LITERAL, EMBEDDED_BRANCH, EMBEDDED_ORIGINAL,
+        EMBEDDED_REGISTER, EMBEDDED_ARGUMENT, EMBEDDED_DUPLICATE, EMBEDDED_RETURN, EMBEDDED_PARAM }
 
     @Test void acceptsExpectedHooks() { VerifyAdsDex.verifyHooks(fixture(Change.NONE), true); }
 
@@ -35,6 +38,10 @@ class VerifyAdsDexTest {
 
     @Test void rejectsPlayerHookWhenPatchIsNotSelected() {
         assertThrows(AssertionError.class, () -> VerifyAdsDex.verifyPlayerHooks(playerFixture(PlayerChange.NONE), false));
+    }
+
+    @Test void rejectsEmbeddedHookWhenPatchIsNotSelected() {
+        assertThrows(AssertionError.class, () -> VerifyAdsDex.verifyPlayerHooks(List.of(embeddedFixture(PlayerChange.NONE)), false));
     }
 
     @Test void acceptsNoPlayerHookWhenNotSelected() { VerifyAdsDex.verifyPlayerHooks(List.of(), false); }
@@ -63,8 +70,31 @@ class VerifyAdsDexTest {
                         new ImmutableInstruction11x(Opcode.RETURN, 0)), List.of(), List.of()));
         var capability = new ImmutableClassDef(VerifyAdsDex.INSTALLED, 1, "Ljava/lang/Object;", List.of(), null,
                 Set.of(), List.of(), List.of(capabilityMethod));
-        return List.of(new ImmutableClassDef("Lp/ja31;", 1, "Ljava/lang/Object;", List.of(), null,
-                Set.of(), List.of(), List.of(caller)), capability);
+        var classes = new ArrayList<>(List.of(new ImmutableClassDef("Lp/ja31;", 1, "Ljava/lang/Object;", List.of(), null,
+                Set.of(), List.of(), List.of(caller)), capability));
+        if (change != PlayerChange.EMBEDDED_MISSING) classes.add(embeddedFixture(change));
+        if (change == PlayerChange.EMBEDDED_DUPLICATE) classes.add(embeddedFixture(change));
+        return classes;
+    }
+
+    ImmutableClassDef embeddedFixture(PlayerChange change) {
+        String owner = change == PlayerChange.EMBEDDED_OWNER ? "Lp/other;" : "Lp/onq;";
+        int guard = change == PlayerChange.EMBEDDED_PARAM ? 4 : 0;
+        var code = List.<Instruction>of(
+                new ImmutableInstruction35c(Opcode.INVOKE_STATIC, change == PlayerChange.EMBEDDED_ARGUMENT ? 1 : 0, 0, 0, 0, 0, 0,
+                        new ImmutableMethodReference(VerifyAdsDex.PLAYER_HELPER, "showEmbeddedAd", List.of(), "Z")),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT, change == PlayerChange.EMBEDDED_REGISTER ? 1 : guard),
+                new ImmutableInstruction21t(Opcode.IF_NEZ, guard, change == PlayerChange.EMBEDDED_BRANCH ? 3 : 4),
+                new ImmutableInstruction11n(Opcode.CONST_4, guard, change == PlayerChange.EMBEDDED_LITERAL ? 1 : 0),
+                new ImmutableInstruction11x(change == PlayerChange.EMBEDDED_RETURN ? Opcode.RETURN_OBJECT : Opcode.RETURN, guard),
+                new ImmutableInstruction22c(Opcode.IGET_OBJECT, guard, 4, new ImmutableFieldReference("Lp/onq;",
+                        change == PlayerChange.EMBEDDED_ORIGINAL ? "c" : "b", "Ljava/lang/Object;")),
+                new ImmutableInstruction11n(Opcode.CONST_4, 0, 0),
+                new ImmutableInstruction11x(Opcode.RETURN, 0));
+        var method = new ImmutableMethod(owner, "z",
+                List.of(new ImmutableMethodParameter("Lcom/spotify/player/model/ContextTrack;", Set.of(), null)),
+                "Z", 1, Set.of(), Set.of(), new ImmutableMethodImplementation(6, code, List.of(), List.of()));
+        return new ImmutableClassDef(owner, 1, "Ljava/lang/Object;", List.of(), null, Set.of(), List.of(), List.of(method));
     }
 
     List<ImmutableClassDef> fixture(Change change) {
