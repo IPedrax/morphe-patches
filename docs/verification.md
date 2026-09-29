@@ -1341,3 +1341,20 @@ necessary causes of the tested album and playlist errors. They do not prove
 a device rate limit or a permanent account restriction. The different Home
 and detail-page outcomes, together with the owner's report of recovery,
 leave an intermittent account, service, or network condition possible.
+
+The next visible-UI check opened **Late to Set** from a Home recommendation.
+Its cover art and controls loaded, but the track area remained on a loading
+spinner. Tapping **Play** left Spotify's Android media session in `NONE` with
+no track metadata. Wi-Fi was briefly disabled, Android selected cellular as
+the default network, and the same album again showed no tracks or playback.
+Wi-Fi was restored and confirmed as the default network afterward.
+
+On restored Wi-Fi, Search for **Archangel Burial** displayed **Something
+went wrong** instead of song results. A process-scoped Android log sample
+contained no HTTP `401`, `403`, or `429` status; its two timeout matches
+came from Bluetooth logging. Absence of an HTTP status in those logs does
+not establish that Spotify received a successful response. This run did not
+reproduce the owner's reported recovery, and the precise successful action
+remains unknown. The broader catalog failure also occurs on the official
+build across both tested network routes, so patch changes are not a useful
+next diagnostic step.
