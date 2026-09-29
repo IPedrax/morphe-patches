@@ -1271,3 +1271,40 @@ but both APKs share Morphe's processing and signing path. A stock-signed
 control on this Pixel is still needed to separate that path from device or
 account behavior. Installing it requires removing the current APK and its
 local Spotify data because the signatures differ.
+
+The owner approved that destructive stock control. The saved base APK alone
+failed installation with `INSTALL_FAILED_MISSING_SPLIT`. The captured stock
+archive contained the base plus four configuration splits. All five APKs
+verified under Spotify's original signing certificate, and the archive's
+base matched the stock fixture SHA-256 above. Installing all five together
+succeeded. Android's installed paths and SHA-256 values matched all five
+original APKs exactly.
+
+After a fresh sign-in on that stock-signed installation, **Untrue** showed
+the same **The tracks on this release are not available** message. **Home**
+also showed **Something went wrong**. **Your Library** loaded its list, but
+the inspected saved playlist had no tracks, so it was not a playback control.
+The stock result demonstrates that neither our patches nor Morphe's APK
+processing and signing are required for the album failure on this Pixel.
+It does not identify why this Spotify account and phone cannot load the
+album while the desktop session can.
+
+The stock APK was removed, and the exact seven-patch APK was reinstalled.
+Android reported a single installed base whose SHA-256 matched
+`18bd737054be208b4a587e2851eb1c766f848680c94430577897ef45b9147ec5`.
+The reinstall erased local Spotify data and Jellyfin authorization as
+expected. The owner signed in again. The exact installed-byte and album check
+passed its verification procedure and still observed `tracks-unavailable`;
+`playbackVerified` remained false. Jellyfin Quick Connect must be authorized
+again to use that service. No music playback or ad removal was verified after
+restoration.
+
+A read-only check of the official Spotify account profile showed this Free
+account set to **Portugal**, while the profile page offered **Spain** as the
+current location. The owner confirmed using the account from Spain for more
+than 14 days. Spotify's [country and region guidance](https://support.spotify.com/mt/article/country-region-settings/)
+says a Free account can be used abroad for up to 14 days and must update its
+account country to continue afterward. This is a plausible account-side
+explanation for the stock and patched phone failures, but it has not been
+validated by changing the country and repeating playback. The account
+country was not changed during this check.
