@@ -1308,3 +1308,36 @@ account country to continue afterward. This is a plausible account-side
 explanation for the stock and patched phone failures, but it has not been
 validated by changing the country and repeating playback. The account
 country was not changed during this check.
+
+### Newer Play Store build control
+
+On September 29, 2026, the owner approved testing a newer official build.
+The seven-patch app was uninstalled, which erased its local data and Jellyfin
+authorization. Google Play installed Spotify `9.1.86.2432` (version code
+`146555520`) under `com.spotify.music`. Android recorded
+`com.android.vending` as the installer. The installed base APK had SHA-256
+`1039f1ab80a37c4657a61af33cc722749e9d0f780a2963238db182947884f65a`
+and Spotify's original signing certificate. This stock installation remains
+on the Pixel; the seven-patch APK has not been restored.
+
+The owner later reported that Spotify was working after some time had passed.
+The report did not identify an album, track, or playback action. A read-only
+Android media-session check at that point showed Spotify in `NONE` with no
+track metadata. That check describes only the moment sampled and cannot
+contradict earlier playback.
+
+Our repeat check on the official build found the active default network was
+Wi-Fi with no VPN transport. Spotify Home loaded recommendations, including
+**Untrue** and a Daily Mix. Opening **Untrue** from its Home tile showed
+**That didn't work right. A quick refresh might fix it.** Tapping
+**Refresh** did not load its track list. The same album failed after a
+force-stop and cold-start. Opening **Daily Mix 5** from Home showed
+**Something went wrong** and **Try again**. A second Android media-session
+sample showed Spotify in `NONE`, with no track metadata. Neither this run
+nor the owner's report establishes audible playback on the newer build.
+
+These observations rule out the seven patches and Morphe repackaging as
+necessary causes of the tested album and playlist errors. They do not prove
+a device rate limit or a permanent account restriction. The different Home
+and detail-page outcomes, together with the owner's report of recovery,
+leave an intermittent account, service, or network condition possible.
