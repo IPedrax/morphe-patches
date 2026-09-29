@@ -1364,3 +1364,58 @@ The owner made the change. The signed-in **Edit profile** page then displayed
 **Profile saved**, with **Spain** selected as the account country. The Pixel
 still had the official Play Store build installed. A subsequent playback
 check remains pending while the phone completes Spotify's login flow.
+
+The phone's email login screen displayed **Please provide a correct email
+address** after an address was entered. A format-only inspection found one
+`@`, a domain dot, ASCII characters, and no whitespace. A fingerprint-only
+comparison confirmed the phone entry matched the signed-in account page's
+registered email exactly; neither address was retained in the report.
+Replacing the last character with the same character cleared the visible
+error, but tapping **Continue** brought it back. The account page listed
+Google as a connected login method. Tapping **Google** on the phone reached
+Google's account chooser. The first listed account matched the registered
+email in the same comparison. The owner selected that account on the phone;
+Spotify returned **Something went wrong**, with **Try again** and **Dismiss**.
+No successful mobile login was observed.
+
+The phone's default Wi-Fi was validated, no always-on VPN was configured, and
+its clock matched the current date and time. A controlled repeat disabled
+Wi-Fi, confirmed cellular was the default network, and submitted the same
+registered email after clearing the visible validation error. Spotify again
+displayed **Please provide a correct email address**. A second fingerprint
+check confirmed the entry remained identical to the registered address.
+Wi-Fi was restored afterward. Neither the tested Wi-Fi nor cellular route
+explains the email rejection by itself.
+
+The owner's Google Play country-change request led to a read-only check of
+**Play Store > Settings > General > Account and device preferences > Country
+and profiles**. Portugal was selected, and Spain was not offered on that
+screen. No Play Store country or payment profile was changed. Google's
+[country-change guidance](https://support.google.com/googleplay/answer/7431675?co=GENIE.Platform%3DAndroid&hl=en)
+requires a local payment method to add a new country and warns that content,
+subscriptions, and Play balance can change. The observed Spotify login error
+does not identify a Play Store country mismatch as its cause.
+
+At the owner's request, the official `9.1.86.2432` installation was removed
+and reinstalled from all five APK splits captured from that same Play Store
+installation. Each APK passed signature verification and shared the same
+signer certificate. After installation, every split's SHA-256 matched its
+captured original, including the base APK recorded above. Android now reports
+no installer package because ADB installed the APKs. The app opened to its
+fresh **Log in** screen. This cleared local Spotify data; the phone was
+already signed out. The owner's first login attempt after reinstall returned
+**Something went wrong** without reaching Home; Android still showed
+`LoginActivity`.
+
+An explicit Android `pm clear com.spotify.music` then returned `Success`.
+On the first launch after that clear, Spotify displayed **Something went
+wrong** before another account was selected. **Try again** produced the same
+screen on cellular, and Wi-Fi was restored. Selecting the linked Google
+account in the app again returned to that error screen. On the same Pixel,
+Spotify's website in Chrome accepted the same linked Google account and
+opened **Account Overview**. Signing into the website did not change the
+app's result: one final in-app Google attempt still returned **Something
+went wrong**. The phone is not signed into the app, and playback after the
+account-country change remains unverified. These checks isolate the current
+failure to the installed app's path, but do not identify its server response
+or root cause.
