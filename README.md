@@ -7,7 +7,7 @@ This repository publishes patch source and bundles, not Spotify APKs.
 > [!NOTE]
 > This is an experimental feature currently under active development.
 > The initial target is Spotify 9.1.80.2221, ARM64. Runtime compatibility is
-> still being verified. See the [verification record](docs/verification.md).
+> still being verified.
 
 [**➕ Add Spicetify to Morphe**](https://morphe.software/add-source?github=spicetify/morphe-patches/tree/dev)
 
@@ -19,16 +19,16 @@ experimental source.
 The published `dev.4` bundle contains four patches. Clean sharing is enabled
 by default; colors, Home shortcut pinning, and HTTPS WebDAV server files are
 optional.
-See [optional feature setup and limits](docs/optional-features.md).
+Choose theme colors in Manager before patching. Configure Home pins and server
+files in Spotify's Spicetify settings after installation.
 
 The current source also includes optional **Hide Premium tab**, **Hide Home
 and Browse ads**, and **Hide player ad cards** patches for local testing.
-They are not yet published. See
-[local feature setup and limits](docs/optional-features.md).
+They are not yet published.
 
 It also includes experimental Jellyfin support in the server-files extension.
-The published `dev.4` bundle supports WebDAV only; see
-[Jellyfin local-build setup](docs/optional-features.md#jellyfin-in-local-builds).
+The published `dev.4` bundle supports WebDAV only. Jellyfin requires a local
+build and setup through Spicetify settings.
 The current source has an Albums, Artists, Songs, and Search browser for
 server music in Spicetify settings. A local six-patch build was tested on a
 Pixel 8: a ten-track Jellyfin album appeared as one ordered album. The browser
@@ -51,7 +51,7 @@ does not yet start playback; Local Files remains the playback entry point.
 
 | 🧪&nbsp;9.1.80.2221 |
 | :---: |
-| Experimental Android customization patches; see the repository verification report. |
+| Experimental Android customization patches; runtime compatibility is still being verified. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
@@ -71,8 +71,7 @@ is `1.0.0-dev.4`. Manager 1.31.1 downloads all four patches, and its default
 profile was patched and installed on a Pixel 8 while preserving login and
 the sharing setting. Runtime testing also covers Home pinning, synthetic
 server playback and seeking, interrupted scans, and recovery on that device.
-See the exact tested artifacts and remaining checks in the
-[verification record](docs/verification.md). There is no stable release.
+There is no stable release.
 
 Use a spare Android device or emulator for the initial tests. A patched APK
 uses a different signing certificate from stock Spotify. Installing it with
@@ -127,7 +126,12 @@ Only installed patches appear here. If you selected **Theme colors**, the
 screen explains how to change them in Manager and repatch Spotify. Colors
 are still selected when patching; they cannot be changed live in Spotify.
 Home pins and server files have their own controls here when installed.
-Follow the [optional feature setup](docs/optional-features.md) to use them.
+
+For server files, enter an HTTPS WebDAV folder URL and credentials in
+**Spicetify**, turn on **Use server files**, then select **Save and scan**.
+After **Tracks ready** appears, return to **Settings and privacy > Apps and
+devices**, enable **Local audio files**, then open **Local Files** in your
+library. The server must support byte-range requests.
 
 To update an existing Manager-signed installation, update **Spicetify Android
 patches** in **Sources**, open Spotify's entry in Manager, and select **Patch**.
@@ -155,7 +159,6 @@ Desktop-signed APK and a Manager-signed APK can use different keys.
 ## Development
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, and release steps.
-The accepted investigation is preserved in [the plan](docs/plan.md).
 
 This project is independent of Spotify and the Morphe project. Its repository
 slug is `morphe-patches`; its display name is Spicetify Android patches.

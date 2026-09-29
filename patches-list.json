@@ -26,7 +26,7 @@
               },
               "isExperimental": true,
               "minSdk": null,
-              "description": "Experimental Android customization patches; see the repository verification report."
+              "description": "Experimental Android customization patches; runtime compatibility is still being verified."
             }
           ]
         }
@@ -58,7 +58,7 @@
               },
               "isExperimental": true,
               "minSdk": null,
-              "description": "Experimental Android customization patches; see the repository verification report."
+              "description": "Experimental Android customization patches; runtime compatibility is still being verified."
             }
           ]
         }
@@ -89,7 +89,7 @@
               },
               "isExperimental": true,
               "minSdk": null,
-              "description": "Experimental Android customization patches; see the repository verification report."
+              "description": "Experimental Android customization patches; runtime compatibility is still being verified."
             }
           ]
         }
@@ -120,7 +120,7 @@
               },
               "isExperimental": true,
               "minSdk": null,
-              "description": "Experimental Android customization patches; see the repository verification report."
+              "description": "Experimental Android customization patches; runtime compatibility is still being verified."
             }
           ]
         }

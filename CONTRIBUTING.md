@@ -2,11 +2,11 @@
 
 Keep changes focused on Spotify Android customizations. Submit source and
 tests without Spotify binaries, account data, signing keys, or access tokens.
-For authoring and porting guidance, read
-[Writing Spotify patches](docs/patch-authoring.md).
+Use the existing patches and tests as examples when authoring or porting a
+patch.
 
 For settings and server changes, use the
-[standalone development app](docs/development-app.md) to test the shared
+[standalone development app](dev-app/) to test the shared
 extension code without rebuilding Spotify or downloading Morphe packages.
 
 ## APK analysis skill
@@ -147,13 +147,18 @@ run these cases without a privately supplied Spotify fixture.
 Record the stock APK's version, version code, ABI, SHA-256, Android version,
 and Morphe version. Apply each patch separately and together, inspect the
 output, and test the affected behavior on Android. Record missing runtime
-checks in [the verification record](docs/verification.md).
+checks in your pull request description.
 
 Keep compatibility targets experimental until the normal Manager source-add,
 patch, installation, and update flows pass. Test sharing with tracks, albums,
 playlists, and episodes, including timestamp links. Check theme colors in
-Home, library, player, settings, and dialogs. Confirm login, playback, queue,
-Connect, background playback, and notifications still work.
+Home, library, player, settings, and dialogs. Pin and unpin Home shortcuts,
+restart Spotify, and confirm the shortcuts still open their targets. For
+server files, scan an HTTPS WebDAV folder, enable **Local audio files**, play
+and seek a track, interrupt a scan, and confirm recovery after restarting.
+Confirm login, playback, queue, Connect, background playback, and
+notifications still work. Record the exact device, build, and results in the
+pull request before enabling a stable release.
 
 When importing code, record its source revision, license, retained notices,
 and local changes in [third-party sources](THIRD_PARTY_NOTICES.md).
