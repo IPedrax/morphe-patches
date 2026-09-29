@@ -136,3 +136,4 @@ local.properties
 *.jks
 .morphe-data/
 .worktrees/
+/docs/
