@@ -107,8 +107,11 @@ restart Spotify, and confirm the shortcuts still open their targets. For
 server files, scan an HTTPS WebDAV folder, enable **Local audio files**, play
 and seek a track, interrupt a scan, and confirm recovery after restarting.
 Confirm login, playback, queue, Connect, background playback, and
-notifications still work. Record the exact device, build, and results in the
-pull request before enabling a stable release.
+notifications still work. Check that unsupported inputs and invalid options
+fail clearly without producing an APK. Test source updates, same-key
+reinstall, cancellation, and recovery to stock Spotify. Confirm a push starts
+CI and prerelease automation for the expected commit. Record the exact device,
+build, and results in the pull request before enabling a stable release.
 
 When importing code, record its source revision, license, retained notices,
 and local changes in [third-party sources](THIRD_PARTY_NOTICES.md).
