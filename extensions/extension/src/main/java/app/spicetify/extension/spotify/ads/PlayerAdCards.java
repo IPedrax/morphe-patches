@@ -8,4 +8,8 @@ public final class PlayerAdCards {
     public static boolean showImageBrandAd(boolean present) {
         return present && !PatchSettings.hidePlayerAdCardsEnabled();
     }
+
+    public static boolean showEmbeddedAd() {
+        return !PatchSettings.hidePlayerAdCardsEnabled();
+    }
 }

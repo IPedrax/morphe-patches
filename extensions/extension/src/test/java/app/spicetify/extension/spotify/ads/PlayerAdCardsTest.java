@@ -39,6 +39,12 @@ public class PlayerAdCardsTest {
         assertFalse(PlayerAdCards.showImageBrandAd(false));
     }
 
+    @Test public void suppressesEmbeddedAdWhenEnabled() {
+        assertFalse(PlayerAdCards.showEmbeddedAd());
+        PatchSettings.setHidePlayerAdCardsEnabled(false);
+        assertTrue(PlayerAdCards.showEmbeddedAd());
+    }
+
     @Test
     @Config(shadows = Capabilities.class)
     public void controlPersistsAcrossActivityRecreation() {

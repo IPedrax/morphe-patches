@@ -1,8 +1,11 @@
 package app.spicetify.patches.spotify.ads
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.util.smali.ExternalLabel
 import app.spicetify.patches.spotify.settings.NativeSettingsAbi
 import app.spicetify.patches.spotify.settings.enableSetting
 import app.spicetify.patches.spotify.settings.settingsPatch
@@ -10,12 +13,13 @@ import app.spicetify.patches.spotify.spotifyCompatibility
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import java.util.Properties
 
 @Suppress("unused")
 val playerAdCardsPatch = bytecodePatch(
     name = "Hide player ad cards",
-    description = "Hides image brand-ad cards in Now Playing. " +
+    description = "Hides image brand-ad cards and embedded ad pages in Now Playing. " +
         "Does not suppress audio ads or other player overlays. Experimental.",
     default = false,
 ) {
@@ -56,6 +60,24 @@ val playerAdCardsPatch = bytecodePatch(
             invoke-static/range {v$register .. v$register}, Lapp/spicetify/extension/spotify/ads/PlayerAdCards;->showImageBrandAd(Z)Z
             move-result v$register
         """.trimIndent())
+
+        val embeddedAd = mutableClassDefBy("Lp/onq;").methods.single {
+            it.name == "z" && it.returnType == "Z"
+                && it.parameterTypes == listOf("Lcom/spotify/player/model/ContextTrack;")
+        }
+        val first = embeddedAd.getInstruction(0)
+        if (first.opcode != Opcode.IGET_OBJECT || (first as TwoRegisterInstruction).registerA != 0
+            || (first as ReferenceInstruction).reference.toString() != "Lp/onq;->b:Ljava/lang/Object;"
+        ) {
+            throw PatchException("Expected the Now Playing embedded-ad predicate in Lp/onq;->z.")
+        }
+        embeddedAd.addInstructionsWithLabels(0, """
+            invoke-static {}, Lapp/spicetify/extension/spotify/ads/PlayerAdCards;->showEmbeddedAd()Z
+            move-result v0
+            if-nez v0, :show
+            const/4 v0, 0x0
+            return v0
+        """.trimIndent(), ExternalLabel("show", first))
         enableSetting("hidePlayerAdCards")
     }
 }
