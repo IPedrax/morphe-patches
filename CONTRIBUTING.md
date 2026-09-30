@@ -76,14 +76,14 @@ python3 scripts/verify-artifact.py \
   --aapt2 "$ANDROID_HOME/build-tools/36.0.0/aapt2" \
   --apksigner "$ANDROID_HOME/build-tools/36.0.0/apksigner" \
   --sharing \
-  --theme '#FF000000' '#FF1ED760' '#FF1ABC54'
+  --theme
 ```
 
 Use your installed build-tools version in those paths. Run with Java 21 on
 `PATH`, or supply `--java "$JAVA_HOME/bin/java"`. Omit `--sharing` when that
-patch is disabled. Omit `--theme` when colors are disabled; otherwise pass
-the exact background, accent, and pressed-accent values used for patching.
-The checker verifies default color values and IDs, equivalent relocated XML
+patch is disabled. Omit `--theme` when that patch is disabled. Theme colors
+are chosen at runtime, so the checker requires every color resource to match
+the stock APK and checks the seven Encore palette hooks. It verifies color values and IDs, equivalent relocated XML
 selectors, the local builder hook, both final URL hooks, the preference-aware
 wrapper, the private settings Activity, unchanged permissions, and the APK
 signature. It also compares all four installed settings bridge classes with
@@ -123,8 +123,7 @@ python3 scripts/verify-failures.py \
 
 This command creates temporary APK copies with changed settings code, a
 missing sharing fingerprint, a changed server response field, or a renamed
-theme resource, then checks all three
-invalid color options. Each case must report the expected patch failure, exit
+theme resource. Each case must report the expected patch failure, exit
 with status 1, and produce no output APK. Temporary copies are deleted
 afterward. The strict settings snapshot also detects the sharing-marker
 mutation because an inspected obfuscated class contains that literal. These

@@ -12,7 +12,7 @@ import android.widget.TextView;
 import app.spicetify.extension.spotify.theme.ThemeOverlay;
 import java.util.regex.Pattern;
 
-/** The Appearance page: in-app theme colours on Android 11+, otherwise a note about Morphe Manager. */
+/** The Appearance page: background and accent colours chosen in the app. */
 final class ThemeSettings {
     private static final Pattern HEX = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
     static final int[] BACKGROUNDS = {0xFF000000, 0xFF121212, 0xFF0B1026, 0xFF1E1233, 0xFF0E2016, 0xFF261010};
@@ -21,13 +21,9 @@ final class ThemeSettings {
     private ThemeSettings() {}
 
     static void build(Activity activity, LinearLayout content) {
-        if (!ThemeOverlay.active()) {
-            SpotifyStyle.infoRow(content, "Theme colors",
-                    "Your colors were selected in Morphe Manager. Change those options and repatch Spotify to use different colors.");
-            return;
-        }
-        TextView intro = SpotifyStyle.body(activity, "Choose colors here instead of repatching. Restart Spotify to apply them. "
-                + "Some screens and hardcoded colors keep Spotify's own colors.");
+        String scope = ThemeOverlay.active() ? "" : " On this Android version, fewer screens change.";
+        TextView intro = SpotifyStyle.body(activity, "Restart Spotify to apply these colors. "
+                + "Some screens and hardcoded colors keep Spotify's own colors." + scope);
         intro.setPadding(SpotifyStyle.dp(activity, 16), SpotifyStyle.dp(activity, 16), SpotifyStyle.dp(activity, 16), SpotifyStyle.dp(activity, 8));
         content.addView(intro);
         SpotifyStyle.colorRow(content, "Background", ThemeOverlay.background(),
@@ -37,9 +33,9 @@ final class ThemeSettings {
                 view -> pick(activity, "Accent color", ThemeOverlay.accent(), ACCENTS,
                         color -> save(activity, content, PatchSettings.themeBackground(), color)));
         if (PatchSettings.themeBackground() != null || PatchSettings.themeAccent() != null) {
-            SpotifyStyle.actionRow(content, "Use Morphe Manager colors",
+            SpotifyStyle.actionRow(content, "Use Spotify's colors",
                     "Return to " + SpotifyStyle.hex(ThemeOverlay.patchedBackground()) + " and "
-                            + SpotifyStyle.hex(ThemeOverlay.patchedAccent()) + ", the colors chosen while patching.",
+                            + SpotifyStyle.hex(ThemeOverlay.patchedAccent()) + ".",
                     view -> save(activity, content, null, null));
         }
     }

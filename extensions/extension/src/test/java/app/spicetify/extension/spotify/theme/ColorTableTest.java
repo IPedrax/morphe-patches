@@ -46,6 +46,6 @@ public class ColorTableTest {
     }
 
     @Test public void derivesPressedAccentByDarkening() {
-        assertEquals(0xFF1ABB54, ThemeOverlay.pressed(0xFF1ED760));
+        assertEquals(0xFF1ABB54, EncorePalette.pressed(0xFF1ED760));
     }
 }

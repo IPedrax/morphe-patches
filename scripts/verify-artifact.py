@@ -110,7 +110,7 @@ def main():
     parser.add_argument("--hide-premium-tab", action="store_true")
     parser.add_argument("--hide-brand-ads", action="store_true")
     parser.add_argument("--hide-player-ad-cards", action="store_true")
-    parser.add_argument("--theme", nargs=3, metavar=("BACKGROUND", "ACCENT", "PRESSED"))
+    parser.add_argument("--theme", action="store_true")
     args = parser.parse_args()
     with zipfile.ZipFile(args.bundle) as bundle:
         try:
@@ -122,22 +122,8 @@ def main():
                 raise AssertionError("Bundle has an invalid Android patch DEX header")
     before = colors(args.aapt2, args.stock)
     after = colors(args.aapt2, args.patched)
+    # Theme colors are chosen at runtime, so every color resource must match the stock APK.
     expected = {}
-    if args.theme:
-        normalized = []
-        for value in args.theme:
-            if not re.fullmatch(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?", value):
-                parser.error("Colors must be #RRGGBB or #AARRGGBB")
-            normalized.append(("#ff" + value[1:] if len(value) == 7 else value).lower())
-        background, accent, pressed = normalized
-        expected = dict.fromkeys([
-            "gray_7", "gray_10", "dark_base_background_base",
-            "dark_base_background_elevated_base", "bg_gradient_end_color", "sthlm_blk",
-        ], background)
-        expected.update(dict.fromkeys([
-            "dark_brightaccent_background_base", "dark_base_text_brightaccent", "green_light",
-        ], accent))
-        expected["dark_brightaccent_background_press"] = pressed
     for name, (resource_id, value) in before.items():
         wanted = (resource_id, expected.get(name, value))
         if after.get(name) != wanted:
@@ -166,6 +152,11 @@ def main():
         ], check=True)
     subprocess.run([
         args.java, "-Xmx2g", "-cp", str(args.desktop),
+        str(Path(__file__).with_name("VerifyThemeDex.java")),
+        str(args.patched), "1" if args.theme else "0",
+    ], check=True)
+    subprocess.run([
+        args.java, "-Xmx2g", "-cp", str(args.desktop),
         str(Path(__file__).with_name("VerifyNavigationDex.java")),
         str(args.patched), "1" if args.hide_premium_tab else "0",
     ], check=True)
@@ -179,7 +170,7 @@ def main():
     print(json.dumps({
         "stockSha256": digest(args.stock), "patchedSha256": digest(args.patched),
         "bundleSha256": digest(args.bundle),
-        "defaultColorsChecked": len(before), "themeColorsChanged": len(expected),
+        "defaultColorsChecked": len(before), "theme": args.theme,
         "sharing": args.sharing, "signatureVerified": True,
         "homePins": args.home_pins, "serverFiles": args.server_files,
         "hidePremiumTab": args.hide_premium_tab, "hideBrandAds": args.hide_brand_ads,

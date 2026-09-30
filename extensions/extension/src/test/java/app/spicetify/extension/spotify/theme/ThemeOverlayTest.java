@@ -38,7 +38,7 @@ public class ThemeOverlayTest {
         PatchSettings.setThemeColors(0xFF0B1026, 0xFFFF6437);
         assertTrue(ThemeOverlay.refresh());
         assertEquals(0xFFFF6437, resources.getColor(ACCENT, null));
-        assertEquals(ThemeOverlay.pressed(0xFFFF6437), resources.getColor(PRESSED_ACCENT, null));
+        assertEquals(EncorePalette.pressed(0xFFFF6437), resources.getColor(PRESSED_ACCENT, null));
         assertEquals(1, tables().length);
 
         PatchSettings.setThemeColors(null, null);

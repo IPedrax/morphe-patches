@@ -75,11 +75,6 @@ def main():
         ("changed-player-ad-model", "player-ads", "Hide player ad cards", None,
          "Spotify player advertising ABI changed:"),
     ]
-    for key, label in (("backgroundColor", "Primary background color"),
-                       ("accentColor", "Accent color"),
-                       ("pressedAccentColor", "Pressed accent color")):
-        cases.append((f"invalid-{key}", None, "Theme colors", key,
-                      f"{label} must be #RRGGBB or #AARRGGBB."))
 
     if args.case:
         unknown = set(args.case) - {case[0] for case in cases}

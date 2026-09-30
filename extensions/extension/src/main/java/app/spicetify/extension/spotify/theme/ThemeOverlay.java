@@ -51,7 +51,7 @@ public final class ThemeOverlay {
     private static volatile Object provider;
     private static volatile Context context;
     private static volatile Ids ids;
-    private static volatile int patchedBackground = Color.BLACK;
+    private static volatile int patchedBackground = 0xFF121212;
     private static volatile int patchedAccent = Color.rgb(30, 215, 96);
     private static volatile int patchedPressedAccent = Color.rgb(26, 188, 84);
 
@@ -82,12 +82,6 @@ public final class ThemeOverlay {
     public static int accent() {
         Integer saved = PatchSettings.themeAccent();
         return saved == null ? patchedAccent : saved;
-    }
-
-    /** Darkens an accent the way Spotify's pressed green relates to its base green. */
-    static int pressed(int accent) {
-        return Color.argb(Color.alpha(accent), Math.round(Color.red(accent) * 0.87f),
-                Math.round(Color.green(accent) * 0.87f), Math.round(Color.blue(accent) * 0.87f));
     }
 
     static Map<Integer, Integer> colors(Ids ids, int background, int accent, int pressedAccent) {
@@ -182,7 +176,7 @@ public final class ThemeOverlay {
         byte[] table = ColorTable.build(context.getPackageName(), typeNames(ids.pressedAccent), colors(ids,
                 background == null ? patchedBackground : background,
                 accent == null ? patchedAccent : accent,
-                accent == null ? patchedPressedAccent : pressed(accent)));
+                accent == null ? patchedPressedAccent : EncorePalette.pressed(accent)));
         File file = new File(directory, String.format("colors-%08x.arsc", Arrays.hashCode(table)));
         if (!file.isFile()) write(directory, file, table);
         ResourcesProvider next;

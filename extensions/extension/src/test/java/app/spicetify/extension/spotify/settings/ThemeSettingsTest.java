@@ -40,13 +40,13 @@ public class ThemeSettingsTest {
         if (Build.VERSION.SDK_INT >= 30) ThemeOverlayTestAccess.detach();
     }
 
-    @Test public void inactiveOverlayExplainsManagerColors() {
+    @Test public void inactiveOverlayStillOffersColorsWithANote() {
         ThemeOverlayTestAccess.detach();
         try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
             View root = controller.get().getWindow().getDecorView();
-            assertNull(row(root, "Background, #000000"));
-            assertTrue(hasText(root, "Theme colors"));
+            assertNotNull(row(root, "Background, #121212"));
+            assertTrue(hasTextContaining(root, "fewer screens change"));
         }
     }
 
@@ -62,8 +62,8 @@ public class ThemeSettingsTest {
         try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
             View root = controller.get().getWindow().getDecorView();
-            assertNull(row(root, "Use Morphe Manager colors"));
-            row(root, "Background, #000000").performClick();
+            assertNull(row(root, "Use Spotify's colors"));
+            row(root, "Background, #121212").performClick();
             Dialog sheet = ShadowDialog.getLatestDialog();
             EditText hex = first(sheet.getWindow().getDecorView(), EditText.class);
             hex.setText("nope");
@@ -83,17 +83,17 @@ public class ThemeSettingsTest {
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
             View root = controller.get().getWindow().getDecorView();
             assertNotNull(row(root, "Background, #0B1026"));
-            row(root, "Use Morphe Manager colors").performClick();
+            row(root, "Use Spotify's colors").performClick();
             assertNull(PatchSettings.themeBackground());
         }
     }
 
-    @Test @Config(sdk = 29) public void androidTenExplainsManagerColors() {
+    @Test @Config(sdk = 29) public void androidTenOffersColorsWithANote() {
         try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
             View root = controller.get().getWindow().getDecorView();
-            assertNull(row(root, "Background, #000000"));
-            assertTrue(hasText(root, "Theme colors"));
+            assertNotNull(row(root, "Accent, #1ED760"));
+            assertTrue(hasTextContaining(root, "fewer screens change"));
         }
     }
 
@@ -137,6 +137,15 @@ public class ThemeSettingsTest {
             }
         }
         return null;
+    }
+
+    private boolean hasTextContaining(View view, String text) {
+        if (view instanceof TextView && ((TextView) view).getText().toString().contains(text)) return true;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) if (hasTextContaining(group.getChildAt(i), text)) return true;
+        }
+        return false;
     }
 
     private boolean hasText(View view, String text) {

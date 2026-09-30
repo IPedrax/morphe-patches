@@ -55,7 +55,7 @@ public class SettingsNavigationTest {
         ServerConfig.initialize(application);
         try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
                 SpicetifySettingsActivity.page(application, SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
-            assertTrue(hasText(controller.get().getWindow().getDecorView(), "Theme colors"));
+            assertTrue(hasText(controller.get().getWindow().getDecorView(), "Background"));
         }
         try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
                 SpicetifySettingsActivity.page(application, SpicetifySettingsActivity.PAGE_SERVER)).setup()) {

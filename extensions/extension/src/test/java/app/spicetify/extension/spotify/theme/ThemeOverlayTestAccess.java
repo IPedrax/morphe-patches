@@ -13,7 +13,7 @@ public final class ThemeOverlayTestAccess {
     public static void attach(Application application) {
         ThemeOverlay.attach(application, new ThemeOverlay.Ids(
                 new int[] {0x7f060615, 0x7f060610, BACKGROUND, 0x7f0604bd, 0x7f06024e, 0x7f060ed1},
-                new int[] {ACCENT, 0x7f0604d0, 0x7f060643}, PRESSED_ACCENT), 0xFF000000, 0xFF1ED760, 0xFF1ABC54);
+                new int[] {ACCENT, 0x7f0604d0, 0x7f060643}, PRESSED_ACCENT), 0xFF121212, 0xFF1ED760, 0xFF1ABC54);
     }
 
     public static void detach() {

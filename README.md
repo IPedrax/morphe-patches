@@ -19,8 +19,8 @@ experimental source.
 The published `dev.4` bundle contains four patches. Clean sharing is enabled
 by default; colors, Home shortcut pinning, and HTTPS WebDAV server files are
 optional.
-Choose theme colors in Manager before patching. Configure Home pins and server
-files in Spotify's Spicetify settings after installation.
+Choose theme colors, Home pins, and server files in Spotify's Spicetify
+settings after installation.
 
 The current source also includes optional **Hide Premium tab**, **Hide Home
 and Browse ads**, and **Hide player ad cards** patches for local testing.
@@ -37,7 +37,7 @@ does not yet start playback; Local Files remains the playback entry point.
 | Patch | Default | Behavior |
 | --- | --- | --- |
 | Clean sharing links | Enabled | Removes `si`, `pi`, and known `utm_*` parameters from `open.spotify.com` links. Preserves timestamps, context, other parameters, and fragments. |
-| Theme colors | Disabled | Sets selected background, accent, and pressed-accent colors. The default background is AMOLED black. Hardcoded colors and animations can retain Spotify's colors. |
+| Theme colors | Disabled | Choose background and accent colors in Spicetify settings, then restart Spotify. Hardcoded colors and some screens keep Spotify's colors; Android 10 and earlier change fewer screens. |
 | Pin shortcuts on Home | Disabled | Moves selected native Home shortcuts first. Configure pins in Spotify's Spicetify settings, then restart Spotify. |
 | Local files from a server | Disabled | Streams an HTTPS WebDAV folder into Local Files. Requires Android 8 or later and byte-range support; configure the server in Spotify's Spicetify settings. |
 
@@ -93,7 +93,7 @@ instead of adding it again. To add it manually and patch Spotify:
 3. Expand **Spicetify Android patches** and enable **Experimental app versions**.
 4. Return to the app list. Spotify appears with the target version
    `9.1.80.2221`, ARM64 build `145767611`.
-5. Optional: To select colors, Home pins, or server files, open
+5. Optional: To add theme colors, Home pins, or server files, open
    **Settings > Advanced** and enable
    **Expert mode** before selecting Spotify. The default flow applies only
    **Clean sharing links**.
@@ -103,8 +103,7 @@ instead of adding it again. To add it manually and patch Spotify:
    picker** in Manager first.
 7. Read the experimental-support notice and select **Proceed anyway** if you
    want to test this build. In Expert mode, select the optional patches you
-   want. Use **Theme colors** settings to adjust colors before patching, then
-   select **Proceed to patching**.
+   want, then select **Proceed to patching**.
 8. Wait for **Patching complete**, then select **Install**. If Manager reports
    a certificate conflict, uninstall the existing app only after accepting
    the data loss described above. Confirm installation in Android's dialog.
@@ -122,10 +121,10 @@ Version `1.0.0-dev.3` adds a **Spicetify** row to Spotify's settings.
 3. Turn **Clean sharing links** on or off. The next share uses your choice
    immediately. The setting survives restarting Spotify.
 
-Only installed patches appear here. If you selected **Theme colors**, the
-screen explains how to change them in Manager and repatch Spotify. Colors
-are still selected when patching; they cannot be changed live in Spotify.
-Home pins and server files have their own controls here when installed.
+Only installed patches appear here, grouped by category. With **Theme colors**
+installed, **Appearance** lets you choose a background and an accent color;
+restart Spotify to apply them. Home pins and server files have their own
+controls here when installed.
 
 For server files, enter an HTTPS WebDAV folder URL and credentials in
 **Spicetify**, turn on **Use server files**, then select **Save and scan**.
