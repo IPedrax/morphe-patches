@@ -24,9 +24,16 @@ final class BrowseMetadata {
     final List<ArtistCredit> albumArtists;
     final int discNumber;
     final int trackNumber;
+    /** The release year, or 0 when the server does not know it. */
+    final int year;
 
     BrowseMetadata(String albumId, String parentId, String albumArtist, String albumImageTag,
             List<ArtistCredit> artists, List<ArtistCredit> albumArtists, int discNumber, int trackNumber) {
+        this(albumId, parentId, albumArtist, albumImageTag, artists, albumArtists, discNumber, trackNumber, 0);
+    }
+
+    BrowseMetadata(String albumId, String parentId, String albumArtist, String albumImageTag,
+            List<ArtistCredit> artists, List<ArtistCredit> albumArtists, int discNumber, int trackNumber, int year) {
         this.albumId = albumId;
         this.parentId = parentId;
         this.albumArtist = albumArtist;
@@ -35,6 +42,7 @@ final class BrowseMetadata {
         this.albumArtists = Collections.unmodifiableList(new ArrayList<>(albumArtists));
         this.discNumber = discNumber;
         this.trackNumber = trackNumber;
+        this.year = year;
     }
 
     static BrowseMetadata empty() {

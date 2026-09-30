@@ -20,7 +20,7 @@ import java.util.zip.GZIPOutputStream;
 /** Saves the last completed scan so server tracks are available as soon as Spotify starts. */
 final class IndexCache {
     private static final String TAG = "SpicetifyServerIndex";
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final int MAX_TRACKS = 200_000;
 
     private IndexCache() {}
@@ -68,6 +68,7 @@ final class IndexCache {
                 credits(out, browse.albumArtists);
                 out.writeInt(browse.discNumber);
                 out.writeInt(browse.trackNumber);
+                out.writeInt(browse.year);
             }
         } catch (IOException | RuntimeException error) {
             Log.w(TAG, "Could not save the server index", error);
@@ -115,7 +116,8 @@ final class IndexCache {
                 String identity = optional(in);
                 String albumId = in.readUTF(), parentId = in.readUTF(), albumArtist = in.readUTF(), imageTag = in.readUTF();
                 List<BrowseMetadata.ArtistCredit> artists = credits(in), albumArtists = credits(in);
-                BrowseMetadata browse = new BrowseMetadata(albumId, parentId, albumArtist, imageTag, artists, albumArtists, in.readInt(), in.readInt());
+                int disc = in.readInt(), number = in.readInt(), year = in.readInt();
+                BrowseMetadata browse = new BrowseMetadata(albumId, parentId, albumArtist, imageTag, artists, albumArtists, disc, number, year);
                 tracks.add(RemoteTrack.restore(url, name, size, etag, title, album, artist, duration, id, identity, browse));
             }
             return tracks;

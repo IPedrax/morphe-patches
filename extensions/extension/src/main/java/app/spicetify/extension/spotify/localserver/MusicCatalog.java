@@ -31,13 +31,16 @@ public final class MusicCatalog {
         public final String id, title, artist;
         /** Jellyfin's primary image tag for the album, or empty when the server has none. */
         public final String imageTag;
+        /** The release year, or 0 when unknown. */
+        public final int year;
         public final List<Track> tracks;
 
-        private Album(String id, String title, String artist, String imageTag, List<Track> tracks) {
+        private Album(String id, String title, String artist, String imageTag, int year, List<Track> tracks) {
             this.id = id;
             this.title = title;
             this.artist = artist;
             this.imageTag = imageTag;
+            this.year = year;
             this.tracks = Collections.unmodifiableList(new ArrayList<>(tracks));
         }
     }
@@ -70,6 +73,7 @@ public final class MusicCatalog {
     private static final class AlbumBuilder {
         final String id, title, artist;
         String imageTag = "";
+        int year;
         final List<Track> tracks = new ArrayList<>();
 
         AlbumBuilder(String id, String title, String artist) {
@@ -144,6 +148,7 @@ public final class MusicCatalog {
                     ignored -> new AlbumBuilder(albumId, albumTitle, albumArtist));
             album.tracks.add(track);
             if (album.imageTag.isEmpty()) album.imageTag = source.browse.albumImageTag;
+            if (album.year == 0) album.year = source.browse.year;
 
             List<BrowseMetadata.ArtistCredit> credits = source.browse.artists;
             if (credits.isEmpty() && !source.artist.isEmpty())
@@ -172,7 +177,7 @@ public final class MusicCatalog {
         List<Album> albums = new ArrayList<>(albumBuilders.size());
         for (AlbumBuilder value : albumBuilders.values()) {
             value.tracks.sort(albumOrder);
-            albums.add(new Album(value.id, value.title, value.artist, value.imageTag, value.tracks));
+            albums.add(new Album(value.id, value.title, value.artist, value.imageTag, value.year, value.tracks));
         }
         albums.sort(Comparator.comparing((Album album) -> folded(album.title))
                 .thenComparing(album -> folded(album.artist)).thenComparing(album -> album.id));

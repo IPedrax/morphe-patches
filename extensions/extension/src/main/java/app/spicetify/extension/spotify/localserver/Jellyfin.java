@@ -109,7 +109,7 @@ final class Jellyfin implements ProviderSession {
         if (albumArtist.isEmpty() && !artistsWithIds.isEmpty()) albumArtist = artistsWithIds.get(0).name;
         BrowseMetadata browse = new BrowseMetadata(optionalId(item, "AlbumId"), optionalId(item, "ParentId"),
                 albumArtist, shortText(item, "AlbumPrimaryImageTag"), artistsWithIds, albumArtists,
-                optionalIndex(item, "ParentIndexNumber"), optionalIndex(item, "IndexNumber"));
+                optionalIndex(item, "ParentIndexNumber"), optionalIndex(item, "IndexNumber"), optionalIndex(item, "ProductionYear"));
         return new RemoteTrack(config, stream, itemId, sourceId, size, text(selected, "ETag"), container,
                 title, album, artist.toString(), duration, browse);
     }
