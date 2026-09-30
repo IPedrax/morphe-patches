@@ -23,7 +23,6 @@ import android.widget.TextView;
 
 /** A bottom sheet matching Spotify's confirmation sheets: grab handle, centred title and message, stacked buttons. */
 final class SpotifySheet extends Dialog {
-    static final int SHEET = Color.rgb(31, 31, 31);
 
     /** Returns true to dismiss the sheet after the click. */
     interface Action {
@@ -73,7 +72,7 @@ final class SpotifySheet extends Dialog {
         LinearLayout list = SpotifyStyle.column(context);
         ColorStateList tint = new ColorStateList(
                 new int[][] {new int[] {android.R.attr.state_checked}, new int[0]},
-                new int[] {SpotifyStyle.GREEN, SpotifyStyle.SUBDUED});
+                new int[] {SpotifyStyle.accent(), SpotifyStyle.SUBDUED});
         for (int i = 0; i < labels.length; i++) {
             int index = i;
             CheckBox box = new CheckBox(context);
@@ -136,7 +135,7 @@ final class SpotifySheet extends Dialog {
         Window window = getWindow();
         if (window == null) return;
         GradientDrawable background = new GradientDrawable();
-        background.setColor(SHEET);
+        background.setColor(SpotifyStyle.elevated());
         float radius = SpotifyStyle.dp(getContext(), 16);
         background.setCornerRadii(new float[] {radius, radius, radius, radius, 0, 0, 0, 0});
         window.setBackgroundDrawable(background);

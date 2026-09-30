@@ -30,22 +30,50 @@ import android.widget.TextView;
 
 /** Builds settings views that follow Spotify's native settings pages, using Spotify's fonts and icons when present. */
 final class SpotifyStyle {
-    static final int BACKGROUND = Color.rgb(18, 18, 18);
     static final int HEADER = Color.rgb(40, 40, 40);
     static final int DIVIDER = Color.rgb(51, 51, 51);
-    static final int FIELD = Color.rgb(42, 42, 42);
     static final int SUBDUED = Color.rgb(179, 179, 179);
     static final int OUTLINE = Color.rgb(114, 114, 114);
-    static final int GREEN = Color.rgb(30, 215, 96);
 
     private SpotifyStyle() {}
 
+    /** The in-app theme background, or Spotify's own when none is chosen. */
+    static int background() {
+        Integer saved = PatchSettings.themeBackground();
+        return saved == null ? Color.rgb(18, 18, 18) : saved;
+    }
+
+    /** The in-app theme accent, or Spotify's green when none is chosen. */
+    static int accent() {
+        Integer saved = PatchSettings.themeAccent();
+        return saved == null ? Color.rgb(30, 215, 96) : saved;
+    }
+
+    static int elevated() {
+        return lighten(background(), 13);
+    }
+
+    static int field() {
+        return lighten(background(), 24);
+    }
+
+    /** Black or white, whichever reads better on the given colour. */
+    static int onColor(int color) {
+        double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255;
+        return luminance > 0.5 ? Color.BLACK : Color.WHITE;
+    }
+
+    private static int lighten(int color, int amount) {
+        return Color.argb(Color.alpha(color), Math.min(255, Color.red(color) + amount),
+                Math.min(255, Color.green(color) + amount), Math.min(255, Color.blue(color) + amount));
+    }
+
     static View screen(Activity activity, String title, View content) {
         activity.getWindow().setStatusBarColor(HEADER);
-        activity.getWindow().setNavigationBarColor(BACKGROUND);
+        activity.getWindow().setNavigationBarColor(background());
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BACKGROUND);
+        root.setBackgroundColor(background());
 
         FrameLayout header = new FrameLayout(activity);
         header.setBackgroundColor(HEADER);
@@ -213,10 +241,10 @@ final class SpotifyStyle {
         toggle.setShowText(false);
         toggle.setSwitchMinWidth(dp(context, 52));
         StateListDrawable track = new StateListDrawable();
-        track.addState(new int[] {android.R.attr.state_checked}, pill(context, GREEN, 0, 0, 52, 32));
-        track.addState(new int[0], pill(context, FIELD, SUBDUED, 2, 52, 32));
+        track.addState(new int[] {android.R.attr.state_checked}, pill(context, accent(), 0, 0, 52, 32));
+        track.addState(new int[0], pill(context, field(), SUBDUED, 2, 52, 32));
         StateListDrawable thumb = new StateListDrawable();
-        thumb.addState(new int[] {android.R.attr.state_checked}, thumb(context, BACKGROUND, 24));
+        thumb.addState(new int[] {android.R.attr.state_checked}, thumb(context, background(), 24));
         thumb.addState(new int[0], thumb(context, SUBDUED, 16));
         toggle.setTrackDrawable(track);
         toggle.setThumbDrawable(thumb);
@@ -229,7 +257,7 @@ final class SpotifyStyle {
         radio.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         radio.setTypeface(font(context, Font.REGULAR));
         radio.setButtonTintList(new ColorStateList(
-                new int[][] {new int[] {android.R.attr.state_checked}, new int[0]}, new int[] {GREEN, SUBDUED}));
+                new int[][] {new int[] {android.R.attr.state_checked}, new int[0]}, new int[] {accent(), SUBDUED}));
         radio.setMinHeight(dp(context, 48));
         radio.setPaddingRelative(dp(context, 8), 0, dp(context, 16), 0);
     }
@@ -240,8 +268,8 @@ final class SpotifyStyle {
         button.setStateListAnimator(null);
         button.setTypeface(font(context, Font.BOLD));
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        button.setTextColor(primary ? Color.BLACK : Color.WHITE);
-        GradientDrawable shape = pill(context, primary ? GREEN : Color.TRANSPARENT, primary ? 0 : OUTLINE, primary ? 0 : 1, 0, 48);
+        button.setTextColor(primary ? onColor(accent()) : Color.WHITE);
+        GradientDrawable shape = pill(context, primary ? accent() : Color.TRANSPARENT, primary ? 0 : OUTLINE, primary ? 0 : 1, 0, 48);
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33FFFFFF), shape, pill(context, Color.WHITE, 0, 0, 0, 48)));
         button.setMinHeight(dp(context, 48));
         button.setMinimumHeight(dp(context, 48));
@@ -260,7 +288,7 @@ final class SpotifyStyle {
         input.setHintTextColor(OUTLINE);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         GradientDrawable field = new GradientDrawable();
-        field.setColor(FIELD);
+        field.setColor(field());
         field.setCornerRadius(dp(context, 6));
         input.setBackground(field);
         input.setPadding(dp(context, 12), 0, dp(context, 12), 0);
