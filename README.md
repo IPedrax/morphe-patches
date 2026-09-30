@@ -29,17 +29,21 @@ They are not yet published.
 It also includes experimental Jellyfin support in the server-files extension.
 The published `dev.4` bundle supports WebDAV only. Jellyfin requires a local
 build and setup through Spicetify settings.
-The current source has an Albums, Artists, Songs, and Search browser for
-server music in Spicetify settings. A local six-patch build was tested on a
-Pixel 8: a ten-track Jellyfin album appeared as one ordered album. The browser
-does not yet start playback; Local Files remains the playback entry point.
+The current source also adds server albums and artists to Your Library, after
+Spotify's own items, with a filter chip named after the provider (for example
+**Jellyfin**) that shows only server items. Tapping a server album opens it and
+plays it in order through Spotify's player; tapping an artist opens the artist.
+Playback needs Spotify's **Local audio files** setting (Settings → Apps and
+devices). The last completed scan is saved on the device, so server items are
+available as soon as Spotify starts while a fresh scan runs. This was tested on a
+Pixel 8 with a 35,000-track Jellyfin library.
 
 | Patch | Default | Behavior |
 | --- | --- | --- |
 | Clean sharing links | Enabled | Removes `si`, `pi`, and known `utm_*` parameters from `open.spotify.com` links. Preserves timestamps, context, other parameters, and fragments. |
 | Theme colors | Disabled | Choose a theme such as OLED, Midnight, or Nord in Spicetify settings, or pick background, surface, and accent colors yourself, then restart Spotify. Hardcoded colors and some screens keep Spotify's colors; Android 10 and earlier change fewer screens. |
 | Pin shortcuts on Home | Disabled | Moves selected native Home shortcuts first. Configure pins in Spotify's Spicetify settings, then restart Spotify. |
-| Local files from a server | Disabled | Streams an HTTPS WebDAV folder into Local Files. Requires Android 8 or later and byte-range support; configure the server in Spotify's Spicetify settings. |
+| Local files from a server | Disabled | Streams an HTTPS WebDAV folder or Jellyfin library into Local Files and Your Library, with its own filter chip. Requires Android 8 or later, byte-range support, and Spotify's Local audio files setting; configure the server in Spotify's Spicetify settings. |
 
 <!-- PATCHES_START EXPANDED -->
 > **[v1.0.0-dev.4](https://github.com/spicetify/morphe-patches/releases/tag/v1.0.0-dev.4)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;4 patches total
