@@ -1,7 +1,6 @@
 package app.spicetify.extension.spotify.settings;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.view.View;
 import android.os.Looper;
 import android.widget.Button;
@@ -28,7 +27,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.Shadows;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadows.ShadowAlertDialog;
+import org.robolectric.shadows.ShadowDialog;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
@@ -77,11 +76,11 @@ public class ServerFilesSettingsTest {
 
     @Test public void forgettingRequiresConfirmationAndClearsCredentials() {
         button("Forget server").performClick();
-        ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+        sheetButton("Cancel").performClick();
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertTrue(ServerConfig.snapshot().hasPassword());
         button("Forget server").performClick();
-        ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        sheetButton("Forget").performClick();
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertEquals("", ServerConfig.snapshot().rootUrl());
         assertFalse(ServerConfig.snapshot().hasPassword());
@@ -166,7 +165,7 @@ public class ServerFilesSettingsTest {
     @Test public void forgetClearsSavedProviderEvenAfterChangingTheDraftProvider() {
         radio("Jellyfin").performClick();
         button("Forget server").performClick();
-        ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        sheetButton("Forget").performClick();
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertEquals(ServerConfig.Provider.NONE, ServerConfig.snapshot().provider());
     }
@@ -305,6 +304,12 @@ public class ServerFilesSettingsTest {
             android.view.ViewGroup group = (android.view.ViewGroup) root;
             for (int i = 0; i < group.getChildCount(); i++) collectInputs(group.getChildAt(i), result);
         }
+    }
+
+    private Button sheetButton(String label) {
+        Button found = findButton(ShadowDialog.getLatestDialog().getWindow().getDecorView(), label);
+        if (found != null) return found;
+        throw new AssertionError("Missing sheet button: " + label);
     }
 
     private Button button(String label) {

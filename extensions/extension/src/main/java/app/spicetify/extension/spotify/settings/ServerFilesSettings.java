@@ -1,6 +1,5 @@
 package app.spicetify.extension.spotify.settings;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Build;
@@ -162,11 +161,9 @@ final class ServerFilesSettings extends LinearLayout {
             showStatus();
         });
 
-        button(this, "Forget server").setOnClickListener(view -> new AlertDialog.Builder(activity)
-                .setTitle("Forget this server?")
-                .setMessage("Remove its saved credentials and tracks from Spotify. Files on the server stay unchanged.")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Forget", (dialog, which) -> {
+        button(this, "Forget server").setOnClickListener(view -> new SpotifySheet(activity, "Forget this server?",
+                "Remove its saved credentials and tracks from Spotify. Files on the server stay unchanged.")
+                .primary("Forget", () -> {
                     cancelSignIn();
                     ServerConfig.forget();
                     validationError = null;
@@ -181,7 +178,10 @@ final class ServerFilesSettings extends LinearLayout {
                     showSavedSummary(null);
                     webDavChoice.setChecked(true);
                     showStatus();
-                }).show());
+                    return true;
+                })
+                .secondary("Cancel")
+                .show());
     }
 
     private void showSavedSummary(JellyfinConnection connection) {

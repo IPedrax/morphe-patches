@@ -283,7 +283,7 @@ final class SpotifyStyle {
         return Math.round(value * context.getResources().getDisplayMetrics().density);
     }
 
-    private static void heading(TextView view) {
+    static void heading(TextView view) {
         if (Build.VERSION.SDK_INT >= 28) view.setAccessibilityHeading(true);
     }
 

@@ -1,7 +1,6 @@
 package app.spicetify.extension.spotify.settings;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -146,9 +145,9 @@ public final class SpicetifySettingsActivity extends Activity {
     private void chooseHomePins() {
         List<HomePins.Choice> choices = HomePins.choices();
         if (choices.isEmpty()) {
-            new AlertDialog.Builder(this).setTitle("No Home shortcuts loaded")
-                    .setMessage("Return to Home and let its shortcuts load, then open this menu again.")
-                    .setPositiveButton("OK", null).show();
+            new SpotifySheet(this, "No Home shortcuts loaded",
+                    "Return to Home and let its shortcuts load, then open this menu again.")
+                    .primary("OK", () -> true).show();
             return;
         }
         String[] labels = new String[choices.size()];
@@ -162,25 +161,22 @@ public final class SpicetifySettingsActivity extends Activity {
             labels[i] = duplicate ? choice.label + "\n" + choice.id : choice.label;
             selected[i] = choice.pinned;
         }
-        AlertDialog picker = new AlertDialog.Builder(this).setTitle("Pinned Home shortcuts")
-                .setMultiChoiceItems(labels, selected, (dialog, index, checked) -> selected[index] = checked)
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Save", null).create();
-        picker.setOnShowListener(ignored -> picker.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener(button -> {
+        new SpotifySheet(this, "Pinned Home shortcuts", null)
+                .choices(labels, selected)
+                .primary("Save", () -> {
                     List<String> ids = new ArrayList<>();
                     for (int i = 0; i < choices.size(); i++) if (selected[i]) ids.add(choices.get(i).id);
                     try {
                         HomePins.setPinned(ids);
                     } catch (IllegalArgumentException changedSelection) {
                         Toast.makeText(this, changedSelection.getMessage(), Toast.LENGTH_LONG).show();
-                        return;
+                        return false;
                     }
-                    picker.dismiss();
-                    new AlertDialog.Builder(this).setMessage("Pins saved. Restart Spotify to refresh Home.")
-                            .setPositiveButton("OK", null).show();
-                }));
-        picker.show();
+                    new SpotifySheet(this, "Pins saved", "Restart Spotify to refresh Home.").primary("OK", () -> true).show();
+                    return true;
+                })
+                .secondary("Cancel")
+                .show();
     }
 
 }

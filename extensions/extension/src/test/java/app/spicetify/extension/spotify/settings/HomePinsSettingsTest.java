@@ -1,9 +1,14 @@
 package app.spicetify.extension.spotify.settings;
 
-import android.app.AlertDialog;
+import android.app.Dialog;
 import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.TextView;
+import java.util.ArrayList;
+import java.util.List;
 import app.spicetify.extension.spotify.home.HomePins;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -16,7 +21,7 @@ import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
-import org.robolectric.shadows.ShadowAlertDialog;
+import org.robolectric.shadows.ShadowDialog;
 import org.robolectric.shadows.ShadowToast;
 import static org.junit.Assert.*;
 
@@ -33,7 +38,7 @@ public class HomePinsSettingsTest {
         SpicetifySettingsActivity activity = Robolectric.buildActivity(SpicetifySettingsActivity.class,
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup().get();
         choose(activity.getWindow().getDecorView()).performClick();
-        assertEquals("No Home shortcuts loaded", Shadows.shadowOf(ShadowAlertDialog.getLatestAlertDialog()).getTitle());
+        assertTrue(hasText(ShadowDialog.getLatestDialog().getWindow().getDecorView(), "No Home shortcuts loaded"));
     }
 
     @Test public void excessSelectionKeepsPickerOpenAndLeavesSavedPinsUntouched() throws Exception {
@@ -49,15 +54,42 @@ public class HomePinsSettingsTest {
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup().get();
         choose(activity.getWindow().getDecorView()).performClick();
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        AlertDialog picker = ShadowAlertDialog.getLatestAlertDialog();
-        picker.getListView().performItemClick(null, 64, 64);
-        picker.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        Dialog picker = ShadowDialog.getLatestDialog();
+        List<CheckBox> boxes = new ArrayList<>();
+        collect(picker.getWindow().getDecorView(), CheckBox.class, boxes);
+        assertEquals(65, boxes.size());
+        boxes.get(64).performClick();
+        button(picker, "Save").performClick();
         assertTrue(picker.isShowing());
         assertEquals("Too many Home pins.", ShadowToast.getTextOfLatestToast());
         assertEquals(64, HomePins.choices().stream().filter(choice -> choice.pinned).count());
-        picker.getListView().performItemClick(null, 64, 64);
-        picker.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        boxes.get(64).performClick();
+        button(picker, "Save").performClick();
         assertFalse(picker.isShowing());
+    }
+
+    private Button button(Dialog dialog, String label) {
+        List<Button> buttons = new ArrayList<>();
+        collect(dialog.getWindow().getDecorView(), Button.class, buttons);
+        for (Button button : buttons) if (label.contentEquals(button.getText())) return button;
+        throw new AssertionError("Missing button: " + label);
+    }
+
+    private <T extends View> void collect(View view, Class<T> kind, List<T> out) {
+        if (kind.isInstance(view) && !(kind == Button.class && view instanceof CheckBox)) out.add(kind.cast(view));
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) collect(group.getChildAt(i), kind, out);
+        }
+    }
+
+    private boolean hasText(View view, String text) {
+        if (view instanceof TextView && text.contentEquals(((TextView) view).getText())) return true;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) if (hasText(group.getChildAt(i), text)) return true;
+        }
+        return false;
     }
 
     private View choose(View view) {
