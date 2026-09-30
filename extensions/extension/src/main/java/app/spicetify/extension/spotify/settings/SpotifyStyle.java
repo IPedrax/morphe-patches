@@ -27,10 +27,10 @@ import android.widget.RadioButton;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
+import app.spicetify.extension.spotify.theme.ThemeOverlay;
 
 /** Builds settings views that follow Spotify's native settings pages, using Spotify's fonts and icons when present. */
 final class SpotifyStyle {
-    static final int HEADER = Color.rgb(40, 40, 40);
     static final int DIVIDER = Color.rgb(51, 51, 51);
     static final int SUBDUED = Color.rgb(179, 179, 179);
     static final int OUTLINE = Color.rgb(114, 114, 114);
@@ -49,8 +49,16 @@ final class SpotifyStyle {
         return saved == null ? Color.rgb(30, 215, 96) : saved;
     }
 
+    /** Header bars and other top surfaces. */
+    static int surface() {
+        return ThemeOverlay.surface();
+    }
+
     static int elevated() {
-        return lighten(background(), 13);
+        int base = background();
+        int top = surface();
+        return Color.rgb((Color.red(base) + Color.red(top)) / 2, (Color.green(base) + Color.green(top)) / 2,
+                (Color.blue(base) + Color.blue(top)) / 2);
     }
 
     static int field() {
@@ -69,14 +77,14 @@ final class SpotifyStyle {
     }
 
     static View screen(Activity activity, String title, View content) {
-        activity.getWindow().setStatusBarColor(HEADER);
+        activity.getWindow().setStatusBarColor(surface());
         activity.getWindow().setNavigationBarColor(background());
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(background());
 
         FrameLayout header = new FrameLayout(activity);
-        header.setBackgroundColor(HEADER);
+        header.setBackgroundColor(surface());
         FrameLayout bar = new FrameLayout(activity);
         header.addView(bar, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(activity, 56)));
         View back = backButton(activity);
@@ -184,6 +192,44 @@ final class SpotifyStyle {
         swatch.setBackground(swatch(context, color, false));
         row.addView(swatch, new LinearLayout.LayoutParams(dp(context, 32), dp(context, 32)));
         row.setContentDescription(title + ", " + hex);
+        row.setOnClickListener(action);
+        parent.addView(row, matchWidth());
+    }
+
+    /** A selectable theme with its colours shown as overlapping swatches; the chosen one shows a check mark. */
+    static void themeRow(LinearLayout parent, String title, String description, int[] colors, boolean selected,
+            View.OnClickListener action) {
+        Context context = parent.getContext();
+        LinearLayout row = row(context);
+        FrameLayout strip = new FrameLayout(context);
+        int size = dp(context, 28);
+        for (int i = 0; i < colors.length; i++) {
+            View dot = new View(context);
+            dot.setBackground(swatch(context, colors[i], false));
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(size, size);
+            params.setMarginStart(i * dp(context, 18));
+            strip.addView(dot, params);
+        }
+        LinearLayout.LayoutParams stripParams = new LinearLayout.LayoutParams(size + (colors.length - 1) * dp(context, 18), size);
+        stripParams.setMarginEnd(dp(context, 16));
+        row.addView(strip, stripParams);
+        row.addView(labels(context, title, description), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        if (selected) {
+            Drawable check = icon(context, "encore_icon_check_alt_fill_24");
+            View mark;
+            if (check != null) {
+                check.setTint(accent());
+                ImageView image = new ImageView(context);
+                image.setImageDrawable(check);
+                mark = image;
+            } else {
+                mark = new View(context);
+                mark.setBackground(swatch(context, accent(), false));
+            }
+            mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            row.addView(mark, new LinearLayout.LayoutParams(dp(context, 24), dp(context, 24)));
+        }
+        row.setContentDescription(title + (selected ? ", selected" : ""));
         row.setOnClickListener(action);
         parent.addView(row, matchWidth());
     }

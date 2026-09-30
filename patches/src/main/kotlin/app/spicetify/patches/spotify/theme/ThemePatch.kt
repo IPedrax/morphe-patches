@@ -24,7 +24,7 @@ private const val MAP = "Lapp/spicetify/extension/spotify/theme/EncorePalette;->
 
 // Stock Encore background and accent constants that the in-app theme replaces.
 internal val paletteColors = listOf(
-    0xFF121212L, 0xFF1F1F1FL, 0xFF2A2A2AL, 0xFF191919L,
+    0xFF121212L, 0xFF1F1F1FL, 0xFF2A2A2AL, 0xFF191919L, 0xFF282828L,
     0xFF1ED760L, 0xFF3BE477L, 0xFF1ABC54L,
 )
 
@@ -35,7 +35,7 @@ private val themeResourcesPatch = resourcePatch {
 @Suppress("unused")
 val themePatch = bytecodePatch(
     name = "Theme colors",
-    description = "Choose background and accent colors in Spicetify settings. Restart Spotify after changing them. " +
+    description = "Choose a theme, such as OLED, or your own colors in Spicetify settings. Restart Spotify after changing it. " +
         "Some screens and hardcoded colors keep Spotify's colors.",
     default = false,
 ) {

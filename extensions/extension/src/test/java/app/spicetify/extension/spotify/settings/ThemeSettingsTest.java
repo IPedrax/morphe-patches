@@ -1,14 +1,11 @@
 package app.spicetify.extension.spotify.settings;
 
 import android.app.Dialog;
-import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import app.spicetify.extension.spotify.theme.ThemeOverlayTestAccess;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,21 +30,6 @@ public class ThemeSettingsTest {
         var application = RuntimeEnvironment.getApplication();
         application.deleteSharedPreferences("spicetify_patch_settings");
         PatchSettings.initialize(application);
-        if (Build.VERSION.SDK_INT >= 30) ThemeOverlayTestAccess.attach(application);
-    }
-
-    @After public void detach() {
-        if (Build.VERSION.SDK_INT >= 30) ThemeOverlayTestAccess.detach();
-    }
-
-    @Test public void inactiveOverlayStillOffersColorsWithANote() {
-        ThemeOverlayTestAccess.detach();
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
-                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
-            View root = controller.get().getWindow().getDecorView();
-            assertNotNull(row(root, "Background, #121212"));
-            assertTrue(hasTextContaining(root, "fewer screens change"));
-        }
     }
 
     @Test public void parsesOpaqueAndTranslucentHex() {
@@ -58,43 +40,67 @@ public class ThemeSettingsTest {
         assertNull(ThemeSettings.parse("green"));
     }
 
-    @Test public void savingABackgroundKeepsTheAccentAndOffersReset() {
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
-                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
+    @Test public void choosingAThemeSavesItsColorsAndSpotifyClearsThem() {
+        try (var controller = appearance()) {
             View root = controller.get().getWindow().getDecorView();
-            assertNull(row(root, "Use Spotify's colors"));
-            row(root, "Background, #121212").performClick();
+            assertNotNull(row(root, "Spotify, selected"));
+            assertNull(row(root, "Background, #121212"));
+            row(root, "OLED").performClick();
+            assertEquals("oled", PatchSettings.themePreset());
+            assertEquals(Integer.valueOf(0xFF000000), PatchSettings.themeBackground());
+            assertEquals(Integer.valueOf(0xFF121212), PatchSettings.themeSurface());
+            assertEquals(Integer.valueOf(0xFF1ED760), PatchSettings.themeAccent());
+            assertNotNull(row(root, "OLED, selected"));
+            row(root, "Spotify").performClick();
+            assertNull(PatchSettings.themePreset());
+            assertNull(PatchSettings.themeBackground());
+            assertNull(PatchSettings.themeSurface());
+            assertNull(PatchSettings.themeAccent());
+        }
+    }
+
+    @Test public void customStartsFromTheCurrentThemeAndEditsOneColor() {
+        try (var controller = appearance()) {
+            View root = controller.get().getWindow().getDecorView();
+            row(root, "OLED").performClick();
+            row(root, "Custom").performClick();
+            assertEquals(ThemeSettings.CUSTOM, PatchSettings.themePreset());
+            row(root, "Background, #000000").performClick();
             Dialog sheet = ShadowDialog.getLatestDialog();
             EditText hex = first(sheet.getWindow().getDecorView(), EditText.class);
             hex.setText("nope");
             button(sheet, "Save").performClick();
             assertTrue(sheet.isShowing());
-            assertNull(PatchSettings.themeBackground());
             hex.setText("#0B1026");
             button(sheet, "Save").performClick();
             assertFalse(sheet.isShowing());
             assertEquals(Integer.valueOf(0xFF0B1026), PatchSettings.themeBackground());
-            assertNull(PatchSettings.themeAccent());
-        }
-        // Robolectric cannot resolve styles once a loader has providers, so the next Activity uses a fresh loader.
-        ThemeOverlayTestAccess.detach();
-        ThemeOverlayTestAccess.attach(RuntimeEnvironment.getApplication());
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
-                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
-            View root = controller.get().getWindow().getDecorView();
-            assertNotNull(row(root, "Background, #0B1026"));
-            row(root, "Use Spotify's colors").performClick();
-            assertNull(PatchSettings.themeBackground());
+            assertEquals(Integer.valueOf(0xFF121212), PatchSettings.themeSurface());
+            assertEquals(ThemeSettings.CUSTOM, PatchSettings.themePreset());
+            assertNotNull(row(root, "Surface, #121212"));
         }
     }
 
-    @Test @Config(sdk = 29) public void androidTenOffersColorsWithANote() {
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
-                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup()) {
+    @Test public void colorsSavedWithoutAThemeNameCountAsCustom() {
+        RuntimeEnvironment.getApplication().getSharedPreferences("spicetify_patch_settings", 0).edit()
+                .putInt("theme_background", 0xFF0B1026).commit();
+        assertEquals(ThemeSettings.CUSTOM, PatchSettings.themePreset());
+        try (var controller = appearance()) {
+            assertNotNull(row(controller.get().getWindow().getDecorView(), "Custom, selected"));
+        }
+    }
+
+    @Test @Config(sdk = 29) public void androidTenOffersThemesWithANote() {
+        try (var controller = appearance()) {
             View root = controller.get().getWindow().getDecorView();
-            assertNotNull(row(root, "Accent, #1ED760"));
+            assertNotNull(row(root, "OLED"));
             assertTrue(hasTextContaining(root, "fewer screens change"));
         }
+    }
+
+    private org.robolectric.android.controller.ActivityController<SpicetifySettingsActivity> appearance() {
+        return Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup();
     }
 
     private View row(View view, String description) {

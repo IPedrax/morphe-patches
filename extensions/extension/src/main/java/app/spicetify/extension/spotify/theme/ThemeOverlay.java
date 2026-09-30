@@ -78,17 +78,21 @@ public final class ThemeOverlay {
         return saved == null ? patchedBackground : saved;
     }
 
+    public static int surface() {
+        return EncorePalette.surface(PatchSettings.themeBackground(), PatchSettings.themeSurface());
+    }
+
     public static int accent() {
         Integer saved = PatchSettings.themeAccent();
         return saved == null ? patchedAccent : saved;
     }
 
     /** Colours for the saved groups only; a group without a saved colour keeps each resource's own value. */
-    static Map<Integer, Integer> colors(Ids ids, Integer background, Integer accent) {
+    static Map<Integer, Integer> colors(Ids ids, Integer background, Integer surface, Integer accent) {
         Map<Integer, Integer> colors = new LinkedHashMap<>();
-        if (background != null) {
-            for (int id : ids.background) colors.put(id, background);
-            colors.put(ids.background[3], EncorePalette.lighten(background, 13));
+        if (background != null || surface != null) {
+            for (int id : ids.background) colors.put(id, EncorePalette.base(background));
+            colors.put(ids.background[3], EncorePalette.elevated(background, surface));
         }
         if (accent != null) {
             for (int id : ids.accent) colors.put(id, accent);
@@ -166,17 +170,18 @@ public final class ThemeOverlay {
     private static synchronized void update() throws IOException {
         ResourcesLoader current = (ResourcesLoader) loader;
         Integer background = PatchSettings.themeBackground();
+        Integer surface = PatchSettings.themeSurface();
         Integer accent = PatchSettings.themeAccent();
         File directory = new File(context.getNoBackupFilesDir(), DIRECTORY);
         ResourcesProvider previous = (ResourcesProvider) provider;
-        if (background == null && accent == null) {
+        if (background == null && surface == null && accent == null) {
             current.clearProviders();
             provider = null;
             if (previous != null) previous.close();
             deleteTables(directory, null);
             return;
         }
-        byte[] table = ColorTable.build(context.getPackageName(), typeNames(ids.pressedAccent), colors(ids, background, accent));
+        byte[] table = ColorTable.build(context.getPackageName(), typeNames(ids.pressedAccent), colors(ids, background, surface, accent));
         File file = new File(directory, String.format("colors-%08x.arsc", Arrays.hashCode(table)));
         if (!file.isFile()) write(directory, file, table);
         ResourcesProvider next;

@@ -6,7 +6,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.*;
 
 class VerifyThemeDex {
     static final String MAP = "Lapp/spicetify/extension/spotify/theme/EncorePalette;->map(J)J";
-    static final Set<Long> COLORS = Set.of(0xFF121212L, 0xFF1F1F1FL, 0xFF2A2A2AL, 0xFF191919L,
+    static final Set<Long> COLORS = Set.of(0xFF121212L, 0xFF1F1F1FL, 0xFF2A2A2AL, 0xFF191919L, 0xFF282828L,
             0xFF1ED760L, 0xFF3BE477L, 0xFF1ABC54L);
 
     static void require(boolean condition, String message) {

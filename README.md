@@ -37,7 +37,7 @@ does not yet start playback; Local Files remains the playback entry point.
 | Patch | Default | Behavior |
 | --- | --- | --- |
 | Clean sharing links | Enabled | Removes `si`, `pi`, and known `utm_*` parameters from `open.spotify.com` links. Preserves timestamps, context, other parameters, and fragments. |
-| Theme colors | Disabled | Choose background and accent colors in Spicetify settings, then restart Spotify. Hardcoded colors and some screens keep Spotify's colors; Android 10 and earlier change fewer screens. |
+| Theme colors | Disabled | Choose a theme such as OLED, Midnight, or Nord in Spicetify settings, or pick background, surface, and accent colors yourself, then restart Spotify. Hardcoded colors and some screens keep Spotify's colors; Android 10 and earlier change fewer screens. |
 | Pin shortcuts on Home | Disabled | Moves selected native Home shortcuts first. Configure pins in Spotify's Spicetify settings, then restart Spotify. |
 | Local files from a server | Disabled | Streams an HTTPS WebDAV folder into Local Files. Requires Android 8 or later and byte-range support; configure the server in Spotify's Spicetify settings. |
 
@@ -122,8 +122,9 @@ Version `1.0.0-dev.3` adds a **Spicetify** row to Spotify's settings.
    immediately. The setting survives restarting Spotify.
 
 Only installed patches appear here, grouped by category. With **Theme colors**
-installed, **Appearance** lets you choose a background and an accent color;
-restart Spotify to apply them. Home pins and server files have their own
+installed, **Appearance** lists themes, including OLED, and a **Custom** option
+for picking background, surface, and accent colors; restart Spotify to apply
+a change. Home pins and server files have their own
 controls here when installed.
 
 For server files, enter an HTTPS WebDAV folder URL and credentials in

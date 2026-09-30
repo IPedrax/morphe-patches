@@ -13,6 +13,7 @@ public final class EncorePalette {
     static final int ELEVATED = 0xFF1F1F1F;
     static final int HIGHLIGHT = 0xFF2A2A2A;
     static final int PRESS = 0xFF191919;
+    static final int SURFACE = 0xFF282828;
     static final int ACCENT = 0xFF1ED760;
     static final int ACCENT_HIGHLIGHT = 0xFF3BE477;
     static final int ACCENT_PRESS = 0xFF1ABC54;
@@ -30,19 +31,20 @@ public final class EncorePalette {
             }
             return argb;
         }
-        Integer background = PatchSettings.themeBackground();
-        Integer accent = PatchSettings.themeAccent();
-        Integer mapped = map((int) argb, background, accent);
+        Integer mapped = map((int) argb, PatchSettings.themeBackground(), PatchSettings.themeSurface(), PatchSettings.themeAccent());
         return mapped == null ? argb : mapped & 0xFFFFFFFFL;
     }
 
-    static Integer map(int color, Integer background, Integer accent) {
-        if (background != null) {
+    static Integer map(int color, Integer background, Integer surface, Integer accent) {
+        if (background != null || surface != null) {
+            int base = base(background);
+            int top = surface(background, surface);
             switch (color) {
-                case BASE: return background;
-                case ELEVATED: return lighten(background, 13);
-                case HIGHLIGHT: return lighten(background, 24);
-                case PRESS: return lighten(background, 7);
+                case BASE: return base;
+                case SURFACE: return top;
+                case ELEVATED: return elevated(background, surface);
+                case HIGHLIGHT: return lighten(top, 2);
+                case PRESS: return mix(base, top, 0.25f);
                 default: break;
             }
         }
@@ -55,6 +57,20 @@ public final class EncorePalette {
             }
         }
         return null;
+    }
+
+    static int base(Integer background) {
+        return background == null ? BASE : background;
+    }
+
+    /** The chosen surface, or one derived from the background the way Spotify's #282828 relates to #121212. */
+    static int surface(Integer background, Integer surface) {
+        if (surface != null) return surface;
+        return background == null ? SURFACE : lighten(background, 22);
+    }
+
+    static int elevated(Integer background, Integer surface) {
+        return mix(base(background), surface(background, surface), 0.5f);
     }
 
     /** Darkens an accent the way Spotify's pressed green relates to its base green. */

@@ -29,19 +29,19 @@ public class ThemeOverlayTest {
 
     @Test public void savedColorsResolveAndResetClearsThem() {
         Resources resources = RuntimeEnvironment.getApplication().getResources();
-        PatchSettings.setThemeColors(0xFF0B1026, null);
+        PatchSettings.setTheme("custom", 0xFF0B1026, null, null);
         assertTrue(ThemeOverlay.refresh());
         assertEquals(0xFF0B1026, resources.getColor(BACKGROUND, null));
-        assertEquals(EncorePalette.lighten(0xFF0B1026, 13), resources.getColor(ELEVATED, null));
+        assertEquals(EncorePalette.elevated(0xFF0B1026, null), resources.getColor(ELEVATED, null));
         assertThrows(Resources.NotFoundException.class, () -> resources.getColor(ACCENT, null));
 
-        PatchSettings.setThemeColors(0xFF0B1026, 0xFFFF6437);
+        PatchSettings.setTheme("custom", 0xFF0B1026, null, 0xFFFF6437);
         assertTrue(ThemeOverlay.refresh());
         assertEquals(0xFFFF6437, resources.getColor(ACCENT, null));
         assertEquals(EncorePalette.pressed(0xFFFF6437), resources.getColor(PRESSED_ACCENT, null));
         assertEquals(1, tables().length);
 
-        PatchSettings.setThemeColors(null, null);
+        PatchSettings.setTheme(null, null, null, null);
         assertTrue(ThemeOverlay.refresh());
         assertThrows(Resources.NotFoundException.class, () -> resources.getColor(BACKGROUND, null));
         assertEquals(0, tables().length);
@@ -49,7 +49,7 @@ public class ThemeOverlayTest {
 
     @Test public void accentOnlyLeavesBackgroundResourcesAlone() {
         Resources resources = RuntimeEnvironment.getApplication().getResources();
-        PatchSettings.setThemeColors(null, 0xFFFF6437);
+        PatchSettings.setTheme("custom", null, null, 0xFFFF6437);
         assertTrue(ThemeOverlay.refresh());
         assertEquals(0xFFFF6437, resources.getColor(ACCENT, null));
         assertThrows(Resources.NotFoundException.class, () -> resources.getColor(BACKGROUND, null));
