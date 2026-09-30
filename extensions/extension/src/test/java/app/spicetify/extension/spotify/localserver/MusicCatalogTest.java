@@ -38,6 +38,38 @@ public class MusicCatalogTest {
                 ServerPlayback.localUri(catalog.album("id:" + ALBUM_A).tracks.get(0)));
     }
 
+    @Test public void dropsSinglesFiledUnderTheAlbumButKeepsRepeatedTitles() {
+        List<BrowseMetadata.ArtistCredit> band = Collections.singletonList(new BrowseMetadata.ArtistCredit(ARTIST_A, "Band"));
+        MusicCatalog catalog = MusicCatalog.from(Arrays.asList(
+                track("1", "Opening", ALBUM_A, 1, 1, band),
+                track("2", "Hit", ALBUM_A, 1, 2, band),
+                track("3", "Intro", ALBUM_A, 1, 3, band),
+                track("4", "Intro", ALBUM_A, 1, 4, band),
+                track("5", "Hit", ALBUM_A, 1, 1, band)));
+        List<MusicCatalog.Track> tracks = catalog.album("id:" + ALBUM_A).tracks;
+        assertEquals(4, tracks.size());
+        assertEquals("Opening", tracks.get(0).title);
+        assertEquals("Hit", tracks.get(1).title);
+        assertEquals(2, tracks.get(1).trackNumber);
+        assertEquals("Intro", tracks.get(2).title);
+        assertEquals("Intro", tracks.get(3).title);
+    }
+
+    @Test public void tracksWithoutADiscSitOnTheFirstDisc() {
+        List<BrowseMetadata.ArtistCredit> band = Collections.singletonList(new BrowseMetadata.ArtistCredit(ARTIST_A, "Band"));
+        MusicCatalog catalog = MusicCatalog.from(Arrays.asList(
+                track("1", "Bonus", ALBUM_A, 1, 3, band),
+                track("2", "Opening", ALBUM_A, 0, 1, band),
+                track("3", "Middle", ALBUM_A, 0, 2, band),
+                track("4", "Middle", ALBUM_A, 1, 1, band)));
+        List<MusicCatalog.Track> tracks = catalog.album("id:" + ALBUM_A).tracks;
+        assertEquals(3, tracks.size());
+        assertEquals("Opening", tracks.get(0).title);
+        assertEquals("Middle", tracks.get(1).title);
+        assertEquals(2, tracks.get(1).trackNumber);
+        assertEquals("Bonus", tracks.get(2).title);
+    }
+
     @Test public void keepsSameNamedAlbumsDistinctAndOrdersDiscs() {
         List<BrowseMetadata.ArtistCredit> artists = Collections.singletonList(
                 new BrowseMetadata.ArtistCredit(ARTIST_A, "Band"));

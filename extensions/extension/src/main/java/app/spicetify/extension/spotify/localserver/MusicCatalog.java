@@ -170,13 +170,14 @@ public final class MusicCatalog {
         }
 
         Comparator<Track> albumOrder = Comparator
-                .comparingInt((Track track) -> knownOrder(track.discNumber))
+                .comparingInt((Track track) -> disc(track))
                 .thenComparingInt(track -> knownOrder(track.trackNumber))
                 .thenComparing(track -> folded(track.title))
                 .thenComparing(track -> track.id);
         List<Album> albums = new ArrayList<>(albumBuilders.size());
         for (AlbumBuilder value : albumBuilders.values()) {
             value.tracks.sort(albumOrder);
+            dropMisfiledCopies(value.tracks);
             albums.add(new Album(value.id, value.title, value.artist, value.imageTag, value.year, value.tracks));
         }
         albums.sort(Comparator.comparing((Album album) -> folded(album.title))
@@ -232,6 +233,33 @@ public final class MusicCatalog {
         String artist = track.browse.albumArtist.isEmpty() ? track.artist : track.browse.albumArtist;
         return folded(track.album) + "\n" + folded(artist);
     }
+
+    /**
+     * Drops extra copies of a song that another release filed under this album, such as a single: a copy is
+     * dropped when the album has another track with the same title and its disc and track position is also
+     * taken by a different song.
+     */
+    static void dropMisfiledCopies(List<Track> tracks) {
+        Map<String, Integer> titles = new HashMap<>();
+        Map<Long, Integer> positions = new HashMap<>();
+        for (Track track : tracks) {
+            titles.merge(folded(track.title), 1, Integer::sum);
+            if (track.trackNumber > 0) positions.merge(position(track), 1, Integer::sum);
+        }
+        for (java.util.Iterator<Track> it = tracks.iterator(); it.hasNext(); ) {
+            Track track = it.next();
+            String title = folded(track.title);
+            if (track.trackNumber == 0 || titles.get(title) < 2 || positions.get(position(track)) < 2) continue;
+            it.remove();
+            titles.merge(title, -1, Integer::sum);
+            positions.merge(position(track), -1, Integer::sum);
+        }
+    }
+
+    private static long position(Track track) { return ((long) disc(track) << 32) | track.trackNumber; }
+
+    /** Tracks tagged without a disc number are on the first disc, next to tracks tagged disc 1. */
+    private static int disc(Track track) { return Math.max(1, track.discNumber); }
 
     private static int knownOrder(int value) { return value == 0 ? Integer.MAX_VALUE : value; }
     private static String folded(String value) { return value.toLowerCase(Locale.ROOT).trim(); }
