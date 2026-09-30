@@ -9,8 +9,10 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -62,11 +64,9 @@ public final class ServerPlayback {
         Object target = player();
         if (target == null) return "Spotify's player is not ready yet. Try again in a moment.";
         if (index < 0 || index >= tracks.size()) return "This song is no longer in the album.";
-        List<String> uris = new ArrayList<>(tracks.size());
-        for (MusicCatalog.Track track : tracks) uris.add(localUri(track));
         Handler main = new Handler(Looper.getMainLooper());
         try {
-            send(target, uris, index).subscribe(
+            send(target, tracks, index).subscribe(
                     outcome -> {
                         if (outcome == null || !outcome.toString().startsWith("Success")) {
                             Log.w(TAG, "Spotify did not play the album: " + outcome);
@@ -84,12 +84,38 @@ public final class ServerPlayback {
         }
     }
 
-    private static Single<?> send(Object target, List<String> uris, int index) throws ReflectiveOperationException {
+    /** The names Spotify shows for a track; its artwork comes from {@link ServerArtwork#bytes}. */
+    static Map<String, String> metadata(MusicCatalog.Track track) {
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("title", track.title);
+        metadata.put("artist_name", track.artist);
+        metadata.put("album_title", track.album);
+        return metadata;
+    }
+
+    private static Single<?> send(Object target, List<MusicCatalog.Track> tracks, int index) throws ReflectiveOperationException {
         ClassLoader loader = target.getClass().getClassLoader();
-        Class<?> immutableList = Class.forName("p.zk30", true, loader);
-        Object trackUris = immutableList.getMethod("p", Collection.class).invoke(null, uris);
+        Class<?> trackType = Class.forName("com.spotify.player.model.ContextTrack", true, loader);
+        Method trackStart = trackType.getMethod("builder", String.class);
+        Class<?> trackBuilder = trackStart.getReturnType();
+        Method withMetadata = trackBuilder.getMethod("metadata", Map.class);
+        Method buildTrack = trackBuilder.getMethod("build");
+        List<Object> contextTracks = new ArrayList<>(tracks.size());
+        for (MusicCatalog.Track track : tracks) {
+            Object builder = trackStart.invoke(null, localUri(track));
+            builder = withMetadata.invoke(builder, metadata(track));
+            contextTracks.add(buildTrack.invoke(builder));
+        }
+        Class<?> pageType = Class.forName("com.spotify.player.model.ContextPage", true, loader);
+        Method pageStart = pageType.getMethod("builder");
+        Object page = pageStart.invoke(null);
+        page = pageStart.getReturnType().getMethod("tracks", List.class).invoke(page, contextTracks);
+        page = pageStart.getReturnType().getMethod("build").invoke(page);
         Class<?> contextType = Class.forName("com.spotify.player.model.Context", true, loader);
-        Object context = contextType.getMethod("fromTrackUris", String.class, immutableList).invoke(null, CONTEXT, trackUris);
+        Method contextStart = contextType.getMethod("builder", String.class);
+        Object context = contextStart.invoke(null, CONTEXT);
+        context = contextStart.getReturnType().getMethod("pages", List.class).invoke(context, Collections.singletonList(page));
+        context = contextStart.getReturnType().getMethod("build").invoke(context);
 
         Class<?> originType = Class.forName("com.spotify.player.model.PlayOrigin", true, loader);
         Method originStart = originType.getMethod("builder", String.class);
