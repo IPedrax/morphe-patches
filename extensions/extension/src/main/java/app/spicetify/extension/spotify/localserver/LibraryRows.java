@@ -291,11 +291,16 @@ public final class LibraryRows {
 
     /** Jellyfin serves item images without authentication; other providers have no artwork. */
     static String image(JellyfinConnection jellyfin, String catalogId, String tag) {
+        return image(jellyfin, catalogId, tag, 320);
+    }
+
+    /** The item's primary image, scaled by the server to fill {@code size} pixels. */
+    static String image(JellyfinConnection jellyfin, String catalogId, String tag, int size) {
         if (jellyfin == null || !catalogId.startsWith("id:")) return "";
         String base = jellyfin.root.toASCIIString();
         StringBuilder url = new StringBuilder(base).append(base.endsWith("/") ? "" : "/")
                 .append("Items/").append(Uri.encode(catalogId.substring(3)))
-                .append("/Images/Primary?fillHeight=320&fillWidth=320&quality=90");
+                .append("/Images/Primary?fillHeight=").append(size).append("&fillWidth=").append(size).append("&quality=90");
         if (tag != null && !tag.isEmpty()) url.append("&tag=").append(Uri.encode(tag));
         return url.toString();
     }

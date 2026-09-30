@@ -91,6 +91,7 @@ public final class MusicCatalog {
     private final Map<String, Album> albumsById;
     private final Map<String, Artist> artistsById;
     private final Map<String, Track> tracksById;
+    private final Map<String, Album> albumsByTrack;
     private final List<String> albumSearch;
     private final List<String> artistSearch;
     private final List<String> trackSearch;
@@ -108,6 +109,9 @@ public final class MusicCatalog {
         Map<String, Track> byTrack = new HashMap<>();
         for (Track track : tracks) byTrack.put(track.id, track);
         tracksById = Collections.unmodifiableMap(byTrack);
+        Map<String, Album> byTrackAlbum = new HashMap<>();
+        for (Album album : albums) for (Track track : album.tracks) byTrackAlbum.put(track.id, album);
+        albumsByTrack = Collections.unmodifiableMap(byTrackAlbum);
         albumSearch = new ArrayList<>(albums.size());
         for (Album album : albums) albumSearch.add(folded(album.title) + "\n" + folded(album.artist));
         artistSearch = new ArrayList<>(artists.size());
@@ -233,9 +237,11 @@ public final class MusicCatalog {
     public Album album(String id) { return albumsById.get(id); }
     public Artist artist(String id) { return artistsById.get(id); }
     public Track track(String id) { return tracksById.get(id); }
+    public Album albumOf(String trackId) { return albumsByTrack.get(trackId); }
     public List<Album> albums(int offset, int limit) { return page(albums, offset, limit); }
-    List<Album> allAlbums() { return albums; }
-    List<Artist> allArtists() { return artists; }
+    public List<Album> allAlbums() { return albums; }
+    public List<Artist> allArtists() { return artists; }
+    public List<Track> allTracks() { return tracks; }
     public List<Artist> artists(int offset, int limit) { return page(artists, offset, limit); }
     public List<Track> songs(int offset, int limit) { return page(tracks, offset, limit); }
 
