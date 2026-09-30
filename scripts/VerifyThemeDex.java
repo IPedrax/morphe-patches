@@ -5,8 +5,6 @@ import com.android.tools.smali.dexlib2.iface.*;
 import com.android.tools.smali.dexlib2.iface.instruction.*;
 
 class VerifyThemeDex {
-    static final List<String> PALETTES = List.of("Lp/brt;", "Lp/cbu;", "Lp/crt;", "Lp/ebu;", "Lp/fbu;", "Lp/fdu;",
-            "Lp/gdu;", "Lp/gwt;", "Lp/hwt;", "Lp/iwt;", "Lp/oau;", "Lp/t9u;");
     static final String MAP = "Lapp/spicetify/extension/spotify/theme/EncorePalette;->map(J)J";
     static final Set<Long> COLORS = Set.of(0xFF121212L, 0xFF1F1F1FL, 0xFF2A2A2AL, 0xFF191919L,
             0xFF1ED760L, 0xFF3BE477L, 0xFF1ABC54L);
@@ -52,7 +50,12 @@ class VerifyThemeDex {
     }
 
     public static void main(String[] args) throws Exception {
-        require(args.length == 2 && Set.of("0", "1").contains(args[1]), "Usage: VerifyThemeDex.java PATCHED THEME_ENABLED");
+        require(args.length == 3 && Set.of("0", "1").contains(args[1]),
+                "Usage: VerifyThemeDex.java PATCHED THEME_ENABLED PALETTE_PROPERTIES");
+        var pinned = new Properties();
+        try (var input = new java.io.FileInputStream(args[2])) { pinned.load(input); }
+        var PALETTES = new TreeSet<>(pinned.stringPropertyNames());
+        require(!PALETTES.isEmpty(), "No pinned palettes in " + args[2]);
         var dex = DexFileFactory.loadDexContainer(new File(args[0]), Opcodes.forApi(35));
         Map<String, ClassDef> palettes = new HashMap<>();
         for (var entry : dex.getDexEntryNames()) for (var cls : dex.getEntry(entry).getDexFile().getClasses()) {

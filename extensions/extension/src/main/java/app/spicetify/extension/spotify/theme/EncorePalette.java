@@ -1,6 +1,7 @@
 package app.spicetify.extension.spotify.theme;
 
 import android.graphics.Color;
+import android.util.Log;
 import app.spicetify.extension.spotify.settings.PatchSettings;
 
 /**
@@ -16,10 +17,19 @@ public final class EncorePalette {
     static final int ACCENT_HIGHLIGHT = 0xFF3BE477;
     static final int ACCENT_PRESS = 0xFF1ABC54;
 
+    private static volatile boolean warned;
+
     private EncorePalette() {}
 
     /** Takes and returns an ARGB colour in the low 32 bits, as Spotify's colour constants are stored. */
     public static long map(long argb) {
+        if (!PatchSettings.initialized()) {
+            if (!warned) {
+                warned = true;
+                Log.w("SpicetifyTheme", "Spotify built its palette before Spicetify settings loaded; keeping stock colors.");
+            }
+            return argb;
+        }
         Integer background = PatchSettings.themeBackground();
         Integer accent = PatchSettings.themeAccent();
         Integer mapped = map((int) argb, background, accent);

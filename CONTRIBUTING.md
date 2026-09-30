@@ -83,7 +83,8 @@ Use your installed build-tools version in those paths. Run with Java 21 on
 `PATH`, or supply `--java "$JAVA_HOME/bin/java"`. Omit `--sharing` when that
 patch is disabled. Omit `--theme` when that patch is disabled. Theme colors
 are chosen at runtime, so the checker requires every color resource to match
-the stock APK and checks the seven Encore palette hooks. It verifies color values and IDs, equivalent relocated XML
+the stock APK. It also checks that each pinned Encore palette class remaps
+every stock theme constant it loads. It verifies color values and IDs, equivalent relocated XML
 selectors, the local builder hook, both final URL hooks, the preference-aware
 wrapper, the private settings Activity, unchanged permissions, and the APK
 signature. It also compares all four installed settings bridge classes with

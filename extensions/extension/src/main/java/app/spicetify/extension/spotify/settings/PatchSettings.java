@@ -26,6 +26,11 @@ public final class PatchSettings {
         if (InstalledPatches.themeColors() && context instanceof Application) ThemeOverlay.install((Application) context);
     }
 
+    /** False until Spotify's Application has loaded the Spicetify settings. */
+    public static boolean initialized() {
+        return preferences != null;
+    }
+
     public static boolean cleanSharingEnabled() {
         SharedPreferences current = preferences;
         return current == null || current.getBoolean(CLEAN_SHARING, true);
@@ -74,19 +79,19 @@ public final class PatchSettings {
         current.edit().putBoolean(HIDE_PLAYER_AD_CARDS, enabled).apply();
     }
 
-    /** Returns the in-app background override, or null to keep the colors chosen while patching. */
+    /** Returns the in-app background color, or null to keep Spotify's own. */
     public static Integer themeBackground() {
         SharedPreferences current = preferences;
         return current != null && current.contains(THEME_BACKGROUND) ? current.getInt(THEME_BACKGROUND, 0) : null;
     }
 
-    /** Returns the in-app accent override, or null to keep the colors chosen while patching. */
+    /** Returns the in-app accent color, or null to keep Spotify's own. */
     public static Integer themeAccent() {
         SharedPreferences current = preferences;
         return current != null && current.contains(THEME_ACCENT) ? current.getInt(THEME_ACCENT, 0) : null;
     }
 
-    /** Saves both theme colors; null for both restores the colors chosen while patching. */
+    /** Saves both theme colors; null keeps Spotify's own color for that part. */
     public static void setThemeColors(Integer background, Integer accent) {
         SharedPreferences current = preferences;
         if (current == null) throw new IllegalStateException("Spicetify settings are not initialized.");

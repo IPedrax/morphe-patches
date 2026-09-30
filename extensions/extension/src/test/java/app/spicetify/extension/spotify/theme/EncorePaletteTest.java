@@ -30,6 +30,22 @@ public class EncorePaletteTest {
         assertNull(EncorePalette.map(0xFFFFFFFF, 0xFF0B1026, orange));
     }
 
+    @Test public void derivesPressAndAccentHighlight() {
+        assertEquals(Integer.valueOf(EncorePalette.lighten(0xFF0B1026, 7)), EncorePalette.map(EncorePalette.PRESS, 0xFF0B1026, null));
+        assertEquals(Integer.valueOf(EncorePalette.mix(0xFFFF6437, 0xFFFFFFFF, 0.12f)),
+                EncorePalette.map(EncorePalette.ACCENT_HIGHLIGHT, null, 0xFFFF6437));
+    }
+
+    @Test public void longWrapperKeepsTheLowThirtyTwoBitFormat() {
+        var application = org.robolectric.RuntimeEnvironment.getApplication();
+        application.deleteSharedPreferences("spicetify_patch_settings");
+        app.spicetify.extension.spotify.settings.PatchSettings.initialize(application);
+        assertEquals(0xFF121212L, EncorePalette.map(0xFF121212L));
+        app.spicetify.extension.spotify.settings.PatchSettings.setThemeColors(0xFF0B1026, null);
+        assertEquals(0xFF0B1026L, EncorePalette.map(0xFF121212L));
+        app.spicetify.extension.spotify.settings.PatchSettings.setThemeColors(null, null);
+    }
+
     @Test public void clampsLightBackgrounds() {
         assertEquals(0xFFFFFFFF, EncorePalette.lighten(0xFFF8F8F8, 24));
     }

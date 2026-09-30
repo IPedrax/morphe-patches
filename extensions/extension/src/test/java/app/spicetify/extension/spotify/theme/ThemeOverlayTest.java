@@ -32,8 +32,8 @@ public class ThemeOverlayTest {
         PatchSettings.setThemeColors(0xFF0B1026, null);
         assertTrue(ThemeOverlay.refresh());
         assertEquals(0xFF0B1026, resources.getColor(BACKGROUND, null));
-        assertEquals(0xFF1ED760, resources.getColor(ACCENT, null));
-        assertEquals(0xFF1ABC54, resources.getColor(PRESSED_ACCENT, null));
+        assertEquals(EncorePalette.lighten(0xFF0B1026, 13), resources.getColor(ELEVATED, null));
+        assertThrows(Resources.NotFoundException.class, () -> resources.getColor(ACCENT, null));
 
         PatchSettings.setThemeColors(0xFF0B1026, 0xFFFF6437);
         assertTrue(ThemeOverlay.refresh());
@@ -45,6 +45,14 @@ public class ThemeOverlayTest {
         assertTrue(ThemeOverlay.refresh());
         assertThrows(Resources.NotFoundException.class, () -> resources.getColor(BACKGROUND, null));
         assertEquals(0, tables().length);
+    }
+
+    @Test public void accentOnlyLeavesBackgroundResourcesAlone() {
+        Resources resources = RuntimeEnvironment.getApplication().getResources();
+        PatchSettings.setThemeColors(null, 0xFFFF6437);
+        assertTrue(ThemeOverlay.refresh());
+        assertEquals(0xFFFF6437, resources.getColor(ACCENT, null));
+        assertThrows(Resources.NotFoundException.class, () -> resources.getColor(BACKGROUND, null));
     }
 
     private File[] tables() {

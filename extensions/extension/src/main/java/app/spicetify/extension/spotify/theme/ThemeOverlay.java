@@ -53,7 +53,6 @@ public final class ThemeOverlay {
     private static volatile Ids ids;
     private static volatile int patchedBackground = 0xFF121212;
     private static volatile int patchedAccent = Color.rgb(30, 215, 96);
-    private static volatile int patchedPressedAccent = Color.rgb(26, 188, 84);
 
     private ThemeOverlay() {}
 
@@ -84,11 +83,17 @@ public final class ThemeOverlay {
         return saved == null ? patchedAccent : saved;
     }
 
-    static Map<Integer, Integer> colors(Ids ids, int background, int accent, int pressedAccent) {
+    /** Colours for the saved groups only; a group without a saved colour keeps each resource's own value. */
+    static Map<Integer, Integer> colors(Ids ids, Integer background, Integer accent) {
         Map<Integer, Integer> colors = new LinkedHashMap<>();
-        for (int id : ids.background) colors.put(id, background);
-        for (int id : ids.accent) colors.put(id, accent);
-        colors.put(ids.pressedAccent, pressedAccent);
+        if (background != null) {
+            for (int id : ids.background) colors.put(id, background);
+            colors.put(ids.background[3], EncorePalette.lighten(background, 13));
+        }
+        if (accent != null) {
+            for (int id : ids.accent) colors.put(id, accent);
+            colors.put(ids.pressedAccent, EncorePalette.pressed(accent));
+        }
         return colors;
     }
 
@@ -101,8 +106,7 @@ public final class ThemeOverlay {
                 Log.w(TAG, "Theme colour resources are missing; in-app colours are unavailable.");
                 return;
             }
-            attach(application, resolved, application.getColor(resolved.background[2]),
-                    application.getColor(resolved.accent[0]), application.getColor(resolved.pressedAccent));
+            attach(application, resolved, application.getColor(resolved.background[2]), application.getColor(resolved.accent[0]));
             refresh();
         } catch (RuntimeException error) {
             Log.e(TAG, "Could not attach theme colours", error);
@@ -138,10 +142,9 @@ public final class ThemeOverlay {
     }
 
     @TargetApi(30)
-    static void attach(Application application, Ids resolved, int background, int accent, int pressedAccent) {
+    static void attach(Application application, Ids resolved, int background, int accent) {
         patchedBackground = background;
         patchedAccent = accent;
-        patchedPressedAccent = pressedAccent;
         ResourcesLoader created = new ResourcesLoader();
         application.getResources().addLoaders(created);
         application.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
@@ -173,10 +176,7 @@ public final class ThemeOverlay {
             deleteTables(directory, null);
             return;
         }
-        byte[] table = ColorTable.build(context.getPackageName(), typeNames(ids.pressedAccent), colors(ids,
-                background == null ? patchedBackground : background,
-                accent == null ? patchedAccent : accent,
-                accent == null ? patchedPressedAccent : EncorePalette.pressed(accent)));
+        byte[] table = ColorTable.build(context.getPackageName(), typeNames(ids.pressedAccent), colors(ids, background, accent));
         File file = new File(directory, String.format("colors-%08x.arsc", Arrays.hashCode(table)));
         if (!file.isFile()) write(directory, file, table);
         ResourcesProvider next;

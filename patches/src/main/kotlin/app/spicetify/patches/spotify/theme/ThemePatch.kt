@@ -10,13 +10,16 @@ import app.spicetify.patches.spotify.settings.themeSettingsPatch
 import app.spicetify.patches.spotify.spotifyCompatibility
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.ThreeRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import java.util.Properties
 
-private const val COLOR = "Lp/iae1;->g(J)J"
+internal const val COLOR = "Lp/iae1;->g(J)J"
 private const val MAP = "Lapp/spicetify/extension/spotify/theme/EncorePalette;->map(J)J"
 
 // Stock Encore background and accent constants that the in-app theme replaces.
@@ -76,19 +79,55 @@ private fun app.morphe.patcher.patch.BytecodePatchContext.hookPalette(type: Stri
     }
 }
 
-/** True when the constant loaded at [index] reaches Color() within a few instructions, before its register is rewritten. */
-private fun feedsColor(instructions: List<com.android.tools.smali.dexlib2.iface.instruction.Instruction>, index: Int): Boolean {
+/**
+ * True when the wide constant loaded at [index] is only ever read by Color() calls, directly or through
+ * move-wide copies that satisfy the same rule, until its register is rewritten, and reaches Color() at least once.
+ * Branches in that span are refused, because the value could then reach a different use on another path.
+ */
+internal fun feedsColor(instructions: List<Instruction>, index: Int): Boolean = colorReads(instructions, index) == true
+
+/** Null when the value in the register loaded at [index] may reach a non-Color use; otherwise whether it reaches Color(). */
+private fun colorReads(instructions: List<Instruction>, index: Int): Boolean? {
     val register = (instructions[index] as OneRegisterInstruction).registerA
-    for (next in instructions.subList(index + 1, minOf(instructions.size, index + 9))) {
-        val firstArgument = when (next) {
-            is FiveRegisterInstruction -> next.registerC
-            is RegisterRangeInstruction -> next.startRegister
-            else -> -1
+    val pair = register..(register + 1)
+    // A wide operand or write at x covers x and x + 1; a narrow one covers x only.
+    val covers = { operand: Int, wide: Boolean -> if (wide) operand in (register - 1)..(register + 1) else operand in pair }
+    var sawColor = false
+    for (position in index + 1 until instructions.size) {
+        val next = instructions[position]
+        val name = next.opcode.toString()
+        if (name.startsWith("IF_") || name.startsWith("GOTO") || name.endsWith("_SWITCH")) return null
+        val writes = next.opcode.setsRegister() && next is OneRegisterInstruction
+        when (next) {
+            is FiveRegisterInstruction, is RegisterRangeInstruction -> {
+                // Invoke argument lists name each half of a wide register, so only the pair itself counts.
+                val arguments = if (next is FiveRegisterInstruction) {
+                    listOf(next.registerC, next.registerD, next.registerE, next.registerF, next.registerG).take(next.registerCount)
+                } else {
+                    val range = next as RegisterRangeInstruction
+                    (range.startRegister until range.startRegister + range.registerCount).toList()
+                }
+                if (arguments.any { it in pair }) {
+                    if ((next as? ReferenceInstruction)?.reference?.toString() != COLOR || arguments.firstOrNull() != register) return null
+                    sawColor = true
+                }
+            }
+            else -> {
+                val wide = "WIDE" in name
+                val operands = buildList {
+                    if (next is OneRegisterInstruction && !writes) add(next.registerA)
+                    if (next is TwoRegisterInstruction) add(next.registerB)
+                    if (next is ThreeRegisterInstruction) add(next.registerC)
+                }
+                if (operands.any { covers(it, wide) }) {
+                    val copy = name.startsWith("MOVE_WIDE") && (next as TwoRegisterInstruction).registerB == register
+                    if (!copy) return null
+                    if (colorReads(instructions, position) ?: return null) sawColor = true
+                }
+            }
         }
-        if ((next as? ReferenceInstruction)?.reference?.toString() == COLOR && firstArgument == register) return true
-        if (next.opcode.setsRegister() && next is OneRegisterInstruction &&
-            next.registerA in (register - 1)..(register + 1)
-        ) return false
+        if (writes && covers((next as OneRegisterInstruction).registerA, next.opcode.setsWideRegister())) return sawColor
+        if (name.startsWith("RETURN") || name == "THROW") return sawColor
     }
-    return false
+    return sawColor
 }
