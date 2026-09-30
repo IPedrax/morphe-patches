@@ -53,7 +53,7 @@ jobs:
       # Semantic release runs its own Gradle build command.
       # Only dev and main branch will generate a release as specified by .releaserc
       - name: Release
-        if: github.ref_name == 'dev' || (github.ref_name == 'main' && vars.STABLE_RELEASE_ENABLED == 'true')
+        if: github.ref_name == 'dev' || github.ref_name == 'main'
         uses: cycjimmy/semantic-release-action@v6
         id: release
         env:
