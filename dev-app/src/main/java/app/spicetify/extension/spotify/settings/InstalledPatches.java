@@ -9,4 +9,5 @@ public final class InstalledPatches {
     public static boolean serverFiles() { return true; }
     public static boolean hidePremiumTab() { return true; }
     public static boolean hideBrandAds() { return true; }
+    public static boolean hidePlayerAdCards() { return true; }
 }
