@@ -182,24 +182,22 @@ public class JellyfinTest {
                 ServerMusicActivity activity = browser.get();
                 View root = activity.findViewById(android.R.id.content);
                 ListView list = findView(root, ListView.class);
-                assertEquals(1, list.getAdapter().getCount());
-                View albumRow = list.getAdapter().getView(0, null, list);
-                assertEquals("Album", ((TextView) ((ViewGroup) albumRow).getChildAt(0)).getText());
-                list.performItemClick(list.getAdapter().getView(0, null, list), 0, 0);
-                assertNotNull(findText(root, "Album · 1 of 1"));
-                assertEquals("Track", ((TextView) ((ViewGroup) list.getAdapter().getView(0, null, list))
-                        .getChildAt(0)).getText());
-                findText(root, "Artists").performClick();
-                assertEquals(1, list.getAdapter().getCount());
-                assertNotNull(findText(root, "Artists · 1 of 1"));
-                list.performItemClick(list.getAdapter().getView(0, null, list), 0, 0);
-                assertNotNull(findText(root, "Artist · 1 of 1"));
-                assertEquals("Album", ((TextView) ((ViewGroup) list.getAdapter().getView(0, null, list))
-                        .getChildAt(0)).getText());
-                findText(root, "Search").performClick();
+                assertEquals(2, list.getAdapter().getCount());
+                assertEquals("Album", rowTitle(list, 1));
+                list.performItemClick(list.getAdapter().getView(1, null, list), 1, 1);
+                assertEquals(3, list.getAdapter().getCount());
+                assertEquals("Track", rowTitle(list, 1));
+                activity.onBackPressed();
+                findText(list.getAdapter().getView(0, null, list), "Artists").performClick();
+                assertEquals(2, list.getAdapter().getCount());
+                list.performItemClick(list.getAdapter().getView(1, null, list), 1, 1);
+                assertNotNull(findText(list.getAdapter().getView(1, null, list), "Albums"));
+                assertEquals("Album", rowTitle(list, 2));
+                activity.onBackPressed();
+                findText(list.getAdapter().getView(0, null, list), "Search").performClick();
                 findView(root, EditText.class).setText("track");
-                assertEquals(1, list.getAdapter().getCount());
-                assertNotNull(findText(root, "Search · 1 results shown"));
+                assertEquals(2, list.getAdapter().getCount());
+                assertEquals("Track", rowTitle(list, 1));
             } finally {
                 browser.pause().stop().destroy();
             }
@@ -212,6 +210,11 @@ public class JellyfinTest {
             ServerConfig.forget();
             assertEquals(0, ServerIndex.catalog().trackCount());
         }
+    }
+
+    private static String rowTitle(ListView list, int position) {
+        ViewGroup row = (ViewGroup) list.getAdapter().getView(position, null, list);
+        return ((TextView) ((ViewGroup) row.getChildAt(1)).getChildAt(0)).getText().toString();
     }
 
     private static <T extends View> T findView(View root, Class<T> type) {

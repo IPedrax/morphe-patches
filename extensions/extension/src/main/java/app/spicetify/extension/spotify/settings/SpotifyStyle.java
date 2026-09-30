@@ -415,7 +415,7 @@ final class SpotifyStyle {
         if (Build.VERSION.SDK_INT >= 28) view.setAccessibilityHeading(true);
     }
 
-    private static View backButton(Context context) {
+    static View backButton(Context context) {
         Drawable arrow = icon(context, "encore_icon_arrow_left_24");
         View back;
         if (arrow != null) {
@@ -460,7 +460,7 @@ final class SpotifyStyle {
         return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
-    private static Drawable selectable(Context context, boolean borderless) {
+    static Drawable selectable(Context context, boolean borderless) {
         TypedArray attributes = context.obtainStyledAttributes(new int[] {
                 borderless ? android.R.attr.selectableItemBackgroundBorderless : android.R.attr.selectableItemBackground});
         try {
