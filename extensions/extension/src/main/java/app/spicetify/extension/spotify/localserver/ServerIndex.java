@@ -48,6 +48,23 @@ public final class ServerIndex {
         Index saved = index;
         return saved.snapshot == snapshot && ServerConfig.isCurrent(snapshot) ? saved.byId.get(id) : null;
     }
+    /**
+     * Waits off the main thread until the saved or scanned index for {@code snapshot} is published,
+     * for callers that start before it is, such as Spotify loading artwork at launch.
+     */
+    static void awaitIndex(ServerConfig.Snapshot snapshot, long timeoutMillis) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) return;
+        long deadline = System.currentTimeMillis() + timeoutMillis;
+        while (index.snapshot != snapshot && ServerConfig.isCurrent(snapshot) && System.currentTimeMillis() < deadline) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
     static void invalidate() {
         index = new Index(null, Collections.emptyList()); status = "Not scanned";
         android.content.Context context = ServerConfig.context();

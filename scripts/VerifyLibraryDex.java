@@ -14,6 +14,7 @@ class VerifyLibraryDex {
     static final String ROWS = "Lapp/spicetify/extension/spotify/localserver/LibraryRows;";
     static final String PLAYBACK = "Lapp/spicetify/extension/spotify/localserver/ServerPlayback;";
     static final String OBSERVABLE = "Lio/reactivex/rxjava3/core/Observable;";
+    static final String ARTWORK = "Lapp/spicetify/extension/spotify/localserver/ServerArtwork;";
 
     enum After { EARLY_RETURN_OBJECT, RETURN_SAME, REPLACE_ARGUMENT, EARLY_RETURN_VOID, NOTHING }
 
@@ -35,6 +36,8 @@ class VerifyLibraryDex {
             List.of("Ljava/lang/Object;", "Ljava/lang/String;"), "Ljava/lang/String;", After.EARLY_RETURN_VOID, 1),
         new Hook("Lp/s4h0;", "g", List.of("Ljava/lang/String;"), ROWS, "open",
             List.of("Ljava/lang/Object;", "Ljava/lang/String;"), "Ljava/lang/String;", After.EARLY_RETURN_VOID, 1),
+        new Hook("Lcom/spotify/imageloader/localfileimage/LocalFileImageLoader;", "loadImage", List.of("Ljava/lang/String;"), ARTWORK, "bytes",
+            List.of("Ljava/lang/String;"), "[B", After.EARLY_RETURN_OBJECT, -1),
         new Hook("Lp/s2w;", "<init>", List.of("Lp/wrj;", "Lp/lm90;", "Z", "Ljava/util/List;"), PLAYBACK, "setPlayer",
             List.of("Ljava/lang/Object;"), "V", After.NOTHING, -1));
 
@@ -71,7 +74,8 @@ class VerifyLibraryDex {
                 method.getImplementation().getInstructions().forEach(code::add);
                 for (int index = 0; index < code.size(); index++) {
                     if (!(code.get(index) instanceof ReferenceInstruction ref) || !(ref.getReference() instanceof MethodReference target)
-                            || !(target.getDefiningClass().equals(ROWS) || target.getDefiningClass().equals(PLAYBACK))) continue;
+                            || !(target.getDefiningClass().equals(ROWS) || target.getDefiningClass().equals(PLAYBACK)
+                            || target.getDefiningClass().equals(ARTWORK))) continue;
                     Hook hook = null;
                     for (Hook candidate : HOOKS) {
                         if (candidate.caller.equals(cls.getType()) && candidate.method.equals(method.getName())

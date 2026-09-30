@@ -20,6 +20,7 @@ private const val HOOK = "Lapp/spicetify/extension/spotify/localserver/LocalServ
 private const val ROWS = "Lapp/spicetify/extension/spotify/localserver/LibraryRows;"
 private const val OBSERVABLE = "Lio/reactivex/rxjava3/core/Observable;"
 private const val PLAYBACK = "Lapp/spicetify/extension/spotify/localserver/ServerPlayback;"
+private const val ARTWORK = "Lapp/spicetify/extension/spotify/localserver/ServerArtwork;"
 private const val ANDROID = "http://schemas.android.com/apk/res/android"
 
 private val serverResourcesPatch = resourcePatch {
@@ -155,6 +156,17 @@ val localFilesFromServerPatch = bytecodePatch(
                 return-void
             """.trimIndent(), ExternalLabel("native", open.getInstruction(0)))
         }
+        // Now Playing and other local-file artwork: Jellyfin tracks use the album image from the server.
+        val image = mutableClassDefBy("Lcom/spotify/imageloader/localfileimage/LocalFileImageLoader;").methods.single {
+            it.name == "loadImage" && it.parameterTypes == listOf("Ljava/lang/String;") && it.returnType == "[B"
+        }
+        requireScratchRegister(image)
+        image.addInstructionsWithLabels(0, """
+            invoke-static/range {p1 .. p1}, $ARTWORK->bytes(Ljava/lang/String;)[B
+            move-result-object v0
+            if-eqz v0, :native
+            return-object v0
+        """.trimIndent(), ExternalLabel("native", image.getInstruction(0)))
         mutableClassDefBy("Lp/ldy;").methods.single { it.name == "b" && it.parameterTypes == listOf("Ljava/util/List;") && it.returnType == "V" }
             .addInstructions(0, """
                 invoke-static/range {p1 .. p1}, $ROWS->remembered(Ljava/util/List;)Ljava/util/List;

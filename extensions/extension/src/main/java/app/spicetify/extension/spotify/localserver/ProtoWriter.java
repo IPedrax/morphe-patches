@@ -14,14 +14,23 @@ final class ProtoWriter {
     private static final int ALBUM_FIELD = 2;
     private static final int ARTIST_FIELD = 3;
     private static final int DURATION_FIELD = 4;
+    private static final int IMAGE_STATE_FIELD = 5;
+    private static final int IMAGE_AVAILABLE = 1;
 
     static byte[] encodeFileEntry(String path, String title, String album, String artist, int durationSeconds)
             throws IOException {
+        return encodeFileEntry(path, title, album, artist, durationSeconds, false);
+    }
+
+    /** {@code artwork} marks the file as having a picture, so Spotify asks {@link ServerArtwork#bytes} for it. */
+    static byte[] encodeFileEntry(String path, String title, String album, String artist, int durationSeconds,
+            boolean artwork) throws IOException {
         ByteArrayOutputStream metadata = new ByteArrayOutputStream();
         writeString(metadata, TITLE_FIELD, title);
         writeString(metadata, ALBUM_FIELD, album);
         writeString(metadata, ARTIST_FIELD, artist);
         writeVarintField(metadata, DURATION_FIELD, durationSeconds);
+        if (artwork) writeVarintField(metadata, IMAGE_STATE_FIELD, IMAGE_AVAILABLE);
 
         ByteArrayOutputStream file = new ByteArrayOutputStream();
         writeString(file, PATH_FIELD, path);

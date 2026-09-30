@@ -14,7 +14,8 @@ public final class LocalServerHook {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             if (original != null) out.write(original);
             for (RemoteTrack track : ServerIndex.tracks()) out.write(ProtoWriter.encodeFileEntry(
-                    ServerFileProvider.uriFor(track).toString(), track.displayTitle(), track.album, track.artist, track.durationSeconds));
+                    ServerFileProvider.uriFor(track).toString(), track.displayTitle(), track.album, track.artist, track.durationSeconds,
+                    track.providerIdentity != null && !track.browse.albumImageTag.isEmpty()));
             return out.toByteArray();
         } catch (java.io.IOException | RuntimeException ex) { return original; }
     }
