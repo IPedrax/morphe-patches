@@ -116,6 +116,8 @@ public final class ServerMusicActivity extends Activity {
     private TextView snackbar;
     private EditText search;
     private View observedHost;
+    private NowPlayingWatcher nowPlaying;
+    private String playingTitle, playingAlbum;
     private Object backCallback;
 
     public static void open(Context context) {
@@ -249,6 +251,13 @@ public final class ServerMusicActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         handler.post(refresh);
+        if (nowPlaying == null) nowPlaying = new NowPlayingWatcher(this, (title, album) -> {
+            if (TextUtils.equals(title, playingTitle) && TextUtils.equals(album, playingAlbum)) return;
+            playingTitle = title;
+            playingAlbum = album;
+            adapter.notifyDataSetChanged();
+        });
+        nowPlaying.start();
         Activity spotify = host.get();
         if (Build.VERSION.SDK_INT >= 30 && spotify != null && !spotify.isDestroyed()) {
             observedHost = spotify.getWindow().getDecorView();
@@ -259,6 +268,7 @@ public final class ServerMusicActivity extends Activity {
 
     @Override protected void onPause() {
         handler.removeCallbacks(refresh);
+        if (nowPlaying != null) nowPlaying.stop();
         if (observedHost != null) {
             observedHost.getViewTreeObserver().removeOnGlobalLayoutListener(hostLayout);
             observedHost = null;
@@ -650,7 +660,8 @@ public final class ServerMusicActivity extends Activity {
             byline.setOnClickListener(view -> navigate(Page.ARTIST, artist.id));
         }
         header.addView(byline);
-        TextView meta = SpotifyStyle.text(this, "Album", 13, SpotifyStyle.SUBDUED, SpotifyStyle.Font.REGULAR);
+        String kind = album != null && album.year > 0 ? "Album • " + album.year : "Album";
+        TextView meta = SpotifyStyle.text(this, kind, 13, SpotifyStyle.SUBDUED, SpotifyStyle.Font.REGULAR);
         meta.setPadding(dp(16), dp(4), dp(16), 0);
         header.addView(meta);
         header.addView(actions(album == null ? Collections.emptyList() : album.tracks));
@@ -813,11 +824,20 @@ public final class ServerMusicActivity extends Activity {
             default: break;
         }
         LinearLayout labels = (LinearLayout) row.getChildAt(1);
-        ((TextView) labels.getChildAt(0)).setText(item.title);
+        TextView title = (TextView) labels.getChildAt(0);
+        title.setText(item.title);
+        title.setTextColor(isPlaying(item) ? SpotifyStyle.accent() : Color.WHITE);
         ((TextView) labels.getChildAt(1)).setText(subtitle);
         if (item.kind != Kind.TRACK) ArtworkLoader.into((ImageView) row.getChildAt(0), image, size,
                 placeholder(item.kind == Kind.ARTIST ? "encore_icon_artist_24" : "encore_icon_album_24"));
         return row;
+    }
+
+    /** True for the song Spotify is playing, matched by the title and album its media session reports. */
+    private boolean isPlaying(Item item) {
+        if (playingTitle == null || (item.kind != Kind.TRACK && item.kind != Kind.SONG)) return false;
+        MusicCatalog.Track track = catalog.track(item.id);
+        return track != null && playingTitle.equals(track.title) && TextUtils.equals(playingAlbum, track.album);
     }
 
     private Drawable placeholder(String icon) {
