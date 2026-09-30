@@ -29,12 +29,15 @@ public final class MusicCatalog {
 
     public static final class Album {
         public final String id, title, artist;
+        /** Jellyfin's primary image tag for the album, or empty when the server has none. */
+        public final String imageTag;
         public final List<Track> tracks;
 
-        private Album(String id, String title, String artist, List<Track> tracks) {
+        private Album(String id, String title, String artist, String imageTag, List<Track> tracks) {
             this.id = id;
             this.title = title;
             this.artist = artist;
+            this.imageTag = imageTag;
             this.tracks = Collections.unmodifiableList(new ArrayList<>(tracks));
         }
     }
@@ -66,6 +69,7 @@ public final class MusicCatalog {
 
     private static final class AlbumBuilder {
         final String id, title, artist;
+        String imageTag = "";
         final List<Track> tracks = new ArrayList<>();
 
         AlbumBuilder(String id, String title, String artist) {
@@ -135,6 +139,7 @@ public final class MusicCatalog {
             AlbumBuilder album = albumBuilders.computeIfAbsent(albumId,
                     ignored -> new AlbumBuilder(albumId, albumTitle, albumArtist));
             album.tracks.add(track);
+            if (album.imageTag.isEmpty()) album.imageTag = source.browse.albumImageTag;
 
             List<BrowseMetadata.ArtistCredit> credits = source.browse.artists;
             if (credits.isEmpty() && !source.artist.isEmpty())
@@ -163,7 +168,7 @@ public final class MusicCatalog {
         List<Album> albums = new ArrayList<>(albumBuilders.size());
         for (AlbumBuilder value : albumBuilders.values()) {
             value.tracks.sort(albumOrder);
-            albums.add(new Album(value.id, value.title, value.artist, value.tracks));
+            albums.add(new Album(value.id, value.title, value.artist, value.imageTag, value.tracks));
         }
         albums.sort(Comparator.comparing((Album album) -> folded(album.title))
                 .thenComparing(album -> folded(album.artist)).thenComparing(album -> album.id));
@@ -229,6 +234,8 @@ public final class MusicCatalog {
     public Artist artist(String id) { return artistsById.get(id); }
     public Track track(String id) { return tracksById.get(id); }
     public List<Album> albums(int offset, int limit) { return page(albums, offset, limit); }
+    List<Album> allAlbums() { return albums; }
+    List<Artist> allArtists() { return artists; }
     public List<Artist> artists(int offset, int limit) { return page(artists, offset, limit); }
     public List<Track> songs(int offset, int limit) { return page(tracks, offset, limit); }
 
