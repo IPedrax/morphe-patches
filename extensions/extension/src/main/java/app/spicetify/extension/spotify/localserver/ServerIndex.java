@@ -50,8 +50,14 @@ public final class ServerIndex {
     }
     static void invalidate() {
         index = new Index(null, Collections.emptyList()); status = "Not scanned";
-        synchronized (worker) { generation++; if (pending != null) pending.cancel(true); worker.getQueue().clear(); }
+        android.content.Context context = ServerConfig.context();
+        synchronized (worker) {
+            generation++; if (pending != null) pending.cancel(true); worker.getQueue().clear();
+            if (context != null) IndexCache.delete(context);
+            else android.util.Log.w("SpicetifyServerIndex", "No context to delete the saved server index");
+        }
         LocalServerHook.requestRescan();
+        LibraryRows.changed();
     }
 
     public static void scanAsync() {
@@ -64,8 +70,24 @@ public final class ServerIndex {
             if (!ServerConfig.isCurrent(snapshot)) return;
             long scanId = ++generation;
             status = "Scanning…";
-            pending = worker.submit(() -> scan(snapshot, scanId));
+            pending = worker.submit(() -> { restore(snapshot, scanId); scan(snapshot, scanId); });
         }
+    }
+
+    /** Publishes the saved index for this server while a fresh scan runs. */
+    private static void restore(ServerConfig.Snapshot snapshot, long scanId) {
+        android.content.Context context = ServerConfig.context();
+        if (context == null || index.snapshot == snapshot) return;
+        List<RemoteTrack> saved = IndexCache.read(IndexCache.file(context), IndexCache.key(snapshot));
+        if (saved.isEmpty() || generation != scanId) return;
+        Index restored = new Index(snapshot, saved);
+        ServerConfig.publish(snapshot, () -> {
+            if (generation == scanId && index.snapshot != snapshot) {
+                index = restored;
+                LocalServerHook.requestRescan();
+                LibraryRows.changed();
+            }
+        });
     }
 
     private static void publishStatus(ServerConfig.Snapshot snapshot, long scanId, String message) {
@@ -97,6 +119,7 @@ public final class ServerIndex {
             if (Thread.currentThread().isInterrupted()) return;
             int skippedTracks = skipped;
             Index completedIndex = new Index(snapshot, completed);
+            save(snapshot, scanId, completed);
             ServerConfig.publish(snapshot, () -> {
                 if (generation == scanId) {
                     index = completedIndex;
@@ -105,14 +128,36 @@ public final class ServerIndex {
                             + " · Artists: " + completedIndex.catalog.artistCount()
                             + (skippedTracks == 0 ? "" : " (" + skippedTracks + " skipped)");
                     LocalServerHook.requestRescan();
+                    LibraryRows.changed();
                 }
             });
         } catch (JellyfinClient.AuthenticationException ex) {
-            publishStatus(snapshot, scanId, "Jellyfin sign-in expired or access was denied. Sign in again.");
+            ServerConfig.publish(snapshot, () -> {
+                if (generation != scanId) return;
+                index = new Index(null, Collections.emptyList());
+                status = "Jellyfin sign-in expired or access was denied. Sign in again.";
+                LocalServerHook.requestRescan();
+                LibraryRows.changed();
+            });
         } catch (Exception ex) {
-            publishStatus(snapshot, scanId, snapshot.provider() == ServerConfig.Provider.JELLYFIN
+            String saved = index.snapshot == snapshot ? " Showing the last completed scan." : "";
+            publishStatus(snapshot, scanId, (snapshot.provider() == ServerConfig.Provider.JELLYFIN
                     ? "Jellyfin scan failed. Check the server and try again."
-                    : "Scan failed. Check the HTTPS WebDAV folder, credentials, and byte-range support.");
+                    : "Scan failed. Check the HTTPS WebDAV folder, credentials, and byte-range support.") + saved);
+        }
+    }
+
+    /** Saves a completed scan unless the server was changed or forgotten while it was written. */
+    private static void save(ServerConfig.Snapshot snapshot, long scanId, List<RemoteTrack> completed) {
+        android.content.Context context = ServerConfig.context();
+        String key = IndexCache.key(snapshot);
+        if (context == null || key == null) return;
+        java.io.File file = IndexCache.file(context);
+        java.io.File written = IndexCache.write(file, key, completed);
+        if (written == null) return;
+        synchronized (worker) {
+            if (generation == scanId) IndexCache.commit(written, file);
+            else if (!written.delete()) android.util.Log.w("SpicetifyServerIndex", "Could not delete " + written);
         }
     }
 

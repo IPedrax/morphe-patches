@@ -31,6 +31,13 @@ public class MusicCatalogTest {
                 itemId, "source", 1024, "v1", "flac", title, albumTitle, "Band", 120, browse);
     }
 
+    @Test public void playbackUsesSpotifysLocalFileUriEncoding() {
+        MusicCatalog catalog = MusicCatalog.from(Collections.singletonList(track("1", "A * B", ALBUM_A, "Café & Co", "Band", 1, 1,
+                Collections.singletonList(new BrowseMetadata.ArtistCredit(ARTIST_A, "Band")))));
+        assertEquals("spotify:local:Band:Caf%C3%A9+%26+Co:A+%2A+B:120",
+                ServerPlayback.localUri(catalog.album("id:" + ALBUM_A).tracks.get(0)));
+    }
+
     @Test public void keepsSameNamedAlbumsDistinctAndOrdersDiscs() {
         List<BrowseMetadata.ArtistCredit> artists = Collections.singletonList(
                 new BrowseMetadata.ArtistCredit(ARTIST_A, "Band"));

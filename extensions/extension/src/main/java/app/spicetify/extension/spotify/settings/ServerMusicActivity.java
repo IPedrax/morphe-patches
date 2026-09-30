@@ -27,13 +27,17 @@ import android.widget.ListView;
 import android.widget.TextView;
 import app.spicetify.extension.spotify.localserver.MusicCatalog;
 import app.spicetify.extension.spotify.localserver.ServerIndex;
+import app.spicetify.extension.spotify.localserver.ServerPlayback;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Browses the current server scan inside Spotify; playback remains in Local Files for now. */
+/** Browses the current server scan inside Spotify and plays albums through Spotify's player. */
 public final class ServerMusicActivity extends Activity {
+    private static final String EXTRA_ALBUM = "album";
+    private static final String EXTRA_ARTIST = "artist";
+    private static final String EXTRA_PLAY = "play";
     private static final int PAGE_SIZE = 80;
     private static final int WHITE = Color.WHITE;
     private static final int MUTED = Color.rgb(179, 179, 179);
@@ -48,11 +52,10 @@ public final class ServerMusicActivity extends Activity {
             MusicCatalog current = ServerIndex.catalog();
             if (current.trackCount() > 0 && catalog != current) {
                 catalog = current;
-                mode = ViewMode.ALBUMS;
-                selectedId = null;
-                offset = 0;
-                history.clear();
-                render();
+                if (openPending()) render();
+                else if ((mode == ViewMode.ALBUM && catalog.album(selectedId) == null)
+                        || (mode == ViewMode.ARTIST && catalog.artist(selectedId) == null)) stale();
+                else render();
             } else if (catalog.trackCount() > 0 && !ServerIndex.isCurrent(catalog)) {
                 catalog = current;
                 stale();
@@ -63,6 +66,9 @@ public final class ServerMusicActivity extends Activity {
         }
     };
     private MusicCatalog catalog;
+    private String notice;
+    private String pendingAlbum, pendingArtist;
+    private boolean pendingPlay;
     private ViewMode mode = ViewMode.ALBUMS;
     private String selectedId;
     private int offset;
@@ -74,6 +80,20 @@ public final class ServerMusicActivity extends Activity {
 
     public static void open(Context context) {
         context.startActivity(new Intent(context, ServerMusicActivity.class));
+    }
+
+    /** Opens one album and starts playing it from the first track. */
+    public static void playAlbum(Context context, String albumId) {
+        start(context, new Intent(context, ServerMusicActivity.class).putExtra(EXTRA_ALBUM, albumId).putExtra(EXTRA_PLAY, true));
+    }
+
+    public static void openArtist(Context context, String artistId) {
+        start(context, new Intent(context, ServerMusicActivity.class).putExtra(EXTRA_ARTIST, artistId));
+    }
+
+    private static void start(Context context, Intent intent) {
+        if (!(context instanceof Activity)) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
     }
 
     @Override protected void onCreate(Bundle state) {
@@ -101,7 +121,7 @@ public final class ServerMusicActivity extends Activity {
             button.setTextSize(12);
             button.setMinHeight(dp(48));
             tabs.addView(button, new LinearLayout.LayoutParams(0, dp(56), 1));
-            button.setOnClickListener(view -> { mode = tab; offset = 0; selectedId = null; history.clear(); render(); });
+            button.setOnClickListener(view -> { mode = tab; offset = 0; selectedId = null; notice = null; history.clear(); render(); });
         }
         root.addView(tabs);
 
@@ -144,7 +164,7 @@ public final class ServerMusicActivity extends Activity {
         pager.addView(next, new LinearLayout.LayoutParams(0, dp(52), 1));
         root.addView(pager);
         TextView guidance = new TextView(this);
-        guidance.setText("Browse albums and artists here. Play server tracks from Spotify's Local Files while album playback is being tested.");
+        guidance.setText("Browse albums and artists here. Tap a song in an album to play the album from that song.");
         guidance.setTextColor(MUTED);
         guidance.setTextSize(12);
         guidance.setPadding(dp(8), dp(8), dp(8), dp(8));
@@ -153,7 +173,35 @@ public final class ServerMusicActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(insetRoot);
         if (Build.VERSION.SDK_INT >= 33) backCallback = Api33.register(this);
+        if (state == null) {
+            pendingAlbum = getIntent().getStringExtra(EXTRA_ALBUM);
+            pendingArtist = getIntent().getStringExtra(EXTRA_ARTIST);
+            pendingPlay = getIntent().getBooleanExtra(EXTRA_PLAY, false);
+            openPending();
+        }
         render();
+    }
+
+    /** Opens the album or artist this screen was started for once the catalog has it; true when it did. */
+    private boolean openPending() {
+        if (pendingAlbum == null && pendingArtist == null) return false;
+        if (catalog.trackCount() == 0) {
+            notice = "Loading the server library…";
+            return false;
+        }
+        notice = null;
+        if (pendingAlbum != null && catalog.album(pendingAlbum) != null) {
+            mode = ViewMode.ALBUM;
+            selectedId = pendingAlbum;
+            if (pendingPlay) playAlbumFrom(catalog.album(pendingAlbum).tracks.get(0).id);
+        } else if (pendingArtist != null && catalog.artist(pendingArtist) != null) {
+            mode = ViewMode.ARTIST;
+            selectedId = pendingArtist;
+        } else {
+            notice = pendingAlbum != null ? "This album is not in the current scan." : "This artist is not in the current scan.";
+        }
+        pendingAlbum = pendingArtist = null;
+        return true;
     }
 
     @Override protected void onResume() { super.onResume(); handler.post(refresh); }
@@ -241,6 +289,7 @@ public final class ServerMusicActivity extends Activity {
             status.setText(location + " · " + shown
                     + " of " + total);
         }
+        if (notice != null) status.setText(notice + "\n" + status.getText());
         previous.setVisibility(offset > 0 && mode != ViewMode.SEARCH ? View.VISIBLE : View.INVISIBLE);
         next.setVisibility(offset + PAGE_SIZE < total ? View.VISIBLE : View.INVISIBLE);
         adapter.notifyDataSetChanged();
@@ -257,6 +306,7 @@ public final class ServerMusicActivity extends Activity {
     }
 
     private void stale() {
+        notice = "The server library changed, so this list was reset.";
         mode = ViewMode.ALBUMS;
         selectedId = null;
         offset = 0;
@@ -265,11 +315,29 @@ public final class ServerMusicActivity extends Activity {
     }
 
     private void openRow(Row row) {
-        if (row.destination == null) return;
+        notice = null;
+        if (row.destination == null) {
+            if (mode == ViewMode.ALBUM) playAlbumFrom(row.id);
+            return;
+        }
         history.push(new NavState(mode, selectedId, offset));
         mode = row.destination;
         selectedId = row.id;
         offset = 0;
+        render();
+    }
+
+    private void playAlbumFrom(String trackId) {
+        MusicCatalog.Album album = catalog.album(selectedId);
+        if (album == null) { stale(); return; }
+        int index = 0;
+        while (index < album.tracks.size() && !album.tracks.get(index).id.equals(trackId)) index++;
+        String error = ServerPlayback.play(album.tracks, index, this::showNotice);
+        if (error != null) showNotice(error);
+    }
+
+    private void showNotice(String message) {
+        notice = message;
         render();
     }
 
@@ -367,7 +435,7 @@ public final class ServerMusicActivity extends Activity {
             Row row = rows.get(position);
             ((TextView) cell.getChildAt(0)).setText(row.title);
             ((TextView) cell.getChildAt(1)).setText(row.subtitle);
-            cell.setEnabled(row.destination != null);
+            cell.setEnabled(row.destination != null || mode == ViewMode.ALBUM);
             return cell;
         }
     }

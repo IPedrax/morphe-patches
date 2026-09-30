@@ -53,6 +53,21 @@ public final class RemoteTrack {
         this.browse = browse;
         id = hash(providerIdentity + "\n" + itemId + "\n" + sourceId + "\n" + size + "\n" + version);
     }
+    private RemoteTrack(URI url, String name, long size, String etag, String title, String album, String artist,
+            int durationSeconds, String id, String providerIdentity, BrowseMetadata browse) {
+        if (size <= 0 || size > 2L * 1024 * 1024 * 1024) throw new IllegalArgumentException("Unsupported audio file size.");
+        this.url = url; this.name = name; this.size = size; this.etag = etag;
+        this.title = bounded(title); this.album = bounded(album); this.artist = bounded(artist);
+        this.durationSeconds = Math.max(0, durationSeconds);
+        this.id = id; this.providerIdentity = providerIdentity; this.browse = browse;
+    }
+
+    /** Rebuilds a track saved by {@link IndexCache}; its id and provider identity are kept as scanned. */
+    static RemoteTrack restore(URI url, String name, long size, String etag, String title, String album, String artist,
+            int durationSeconds, String id, String providerIdentity, BrowseMetadata browse) {
+        return new RemoteTrack(url, name, size, etag, title, album, artist, durationSeconds, id, providerIdentity, browse);
+    }
+
     private static String hash(String value) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));

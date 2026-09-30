@@ -45,6 +45,7 @@ androidComponents {
 }
 
 dependencies {
+    implementation("io.reactivex.rxjava3:rxjava:3.1.10")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
 }
