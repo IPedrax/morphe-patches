@@ -129,10 +129,7 @@ public final class SpicetifySettingsActivity extends Activity {
     }
 
     private void buildAppearance(LinearLayout content) {
-        if (InstalledPatches.themeColors()) {
-            SpotifyStyle.infoRow(content, "Theme colors",
-                    "Your colors were selected in Morphe Manager. Change those options and repatch Spotify to use different colors.");
-        }
+        if (InstalledPatches.themeColors()) ThemeSettings.build(this, content);
     }
 
     private void buildServer(LinearLayout content) {

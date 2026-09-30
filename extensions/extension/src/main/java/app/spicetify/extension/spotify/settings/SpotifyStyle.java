@@ -146,6 +146,34 @@ final class SpotifyStyle {
         parent.addView(row, matchWidth());
     }
 
+    /** A tappable row that shows a colour's hex value and a swatch of it. */
+    static void colorRow(LinearLayout parent, String title, int color, View.OnClickListener action) {
+        Context context = parent.getContext();
+        LinearLayout row = row(context);
+        String hex = hex(color);
+        row.addView(labels(context, title, hex), new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        View swatch = new View(context);
+        swatch.setBackground(swatch(context, color, false));
+        row.addView(swatch, new LinearLayout.LayoutParams(dp(context, 32), dp(context, 32)));
+        row.setContentDescription(title + ", " + hex);
+        row.setOnClickListener(action);
+        parent.addView(row, matchWidth());
+    }
+
+    static GradientDrawable swatch(Context context, int color, boolean selected) {
+        GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setColor(color);
+        circle.setStroke(dp(context, selected ? 3 : 1), selected ? Color.WHITE : OUTLINE);
+        return circle;
+    }
+
+    static String hex(int color) {
+        return Color.alpha(color) == 0xFF
+                ? String.format("#%06X", color & 0xFFFFFF)
+                : String.format("#%08X", color);
+    }
+
     /** A non-interactive row with a title and description. */
     static void infoRow(LinearLayout parent, String title, String description) {
         Context context = parent.getContext();

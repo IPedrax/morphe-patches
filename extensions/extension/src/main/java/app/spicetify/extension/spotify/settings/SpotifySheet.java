@@ -98,6 +98,14 @@ final class SpotifySheet extends Dialog {
         return this;
     }
 
+    /** Adds custom content between the message and the buttons. */
+    SpotifySheet view(View view) {
+        LinearLayout.LayoutParams params = wide();
+        params.topMargin = SpotifyStyle.dp(getContext(), 16);
+        content.addView(view, content.indexOfChild(buttons), params);
+        return this;
+    }
+
     SpotifySheet primary(String label, Action action) {
         Button button = new Button(getContext());
         button.setText(label);
