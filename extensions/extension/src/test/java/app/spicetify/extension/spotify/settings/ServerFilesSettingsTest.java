@@ -184,10 +184,46 @@ public class ServerFilesSettingsTest {
         assertEquals(ServerConfig.Provider.JELLYFIN, saved.provider());
         assertEquals("Music", saved.jellyfinConnection().libraryName);
         assertEquals("https://127.0.0.1:1/", saved.jellyfinConnection().root.toString());
-        assertFalse(saved.enabled);
+        assertTrue(saved.enabled);
+        assertTrue(first(form, Switch.class).isChecked());
+        assertNull(jellyfinUrl());
+        assertNotNull(button("Sign in again"));
+        ServerConfig.enabled(false);
         radio("WebDAV").performClick();
         assertEquals("", inputs().get(0).getText().toString());
         assertEquals("Password", inputs().get(2).getHint().toString());
+    }
+
+    @Test public void savedJellyfinHidesSignInUntilAskedAgain() throws Exception {
+        JellyfinClient.Account account = fixtureAccount();
+        assertTrue(ServerConfig.configureJellyfinIfCurrent(ServerConfig.snapshot(), false, account.select(fixtureLibrary(account))));
+        form = new ServerFilesSettings(activity);
+        assertNotNull(button("Rescan library"));
+        assertNull(findButton(form, "Use Quick Connect"));
+        assertNull(jellyfinUrl());
+        button("Sign in again").performClick();
+        assertEquals("https://127.0.0.1:1/", jellyfinUrl().getText().toString());
+        assertNotNull(button("Use Quick Connect"));
+        assertNull(findButton(form, "Sign in again"));
+    }
+
+    @Test public void quickConnectCodeOpensTheApprovalPageOnTheServer() throws Exception {
+        activity.setContentView(form);
+        radio("Jellyfin").performClick();
+        assertNull(findButton(form, "Open in Jellyfin"));
+        Method show = ServerFilesSettings.class.getDeclaredMethod("showCode", java.net.URI.class, String.class);
+        show.setAccessible(true);
+        show.invoke(form, java.net.URI.create("https://jellyfin.example/media/"), "123456");
+        assertNull(findButton(form, "Use Quick Connect"));
+        assertNotNull(button("Get a new code"));
+        button("Open in Jellyfin").performClick();
+        android.content.Intent opened = Shadows.shadowOf(activity).getNextStartedActivity();
+        assertEquals(android.content.Intent.ACTION_VIEW, opened.getAction());
+        assertEquals("https://jellyfin.example/media/web/#/quickconnect?txtQuickConnectCode=123456", opened.getDataString());
+        radio("WebDAV").performClick();
+        radio("Jellyfin").performClick();
+        assertNull(findButton(form, "Open in Jellyfin"));
+        assertNotNull(button("Use Quick Connect"));
     }
 
     @Test public void enablingSavedJellyfinKeepsAnOpenLibraryChoice() throws Exception {
@@ -214,6 +250,7 @@ public class ServerFilesSettingsTest {
                 account.select(fixtureLibrary(account))));
         form = new ServerFilesSettings(activity);
         activity.setContentView(form);
+        button("Sign in again").performClick();
         jellyfinUrl().setText("http://insecure.example/");
         offerLibrary(account);
         Shadows.shadowOf(Looper.getMainLooper()).idle();
@@ -252,6 +289,7 @@ public class ServerFilesSettingsTest {
         assertNull(findButton(form, "Change music library"));
         assertEquals("", jellyfinUrl().getText().toString());
         assertEquals(ServerConfig.Provider.WEBDAV, ServerConfig.snapshot().provider());
+        ServerConfig.enabled(false);
     }
 
     private JellyfinClient.Account fixtureAccount() throws Exception {
