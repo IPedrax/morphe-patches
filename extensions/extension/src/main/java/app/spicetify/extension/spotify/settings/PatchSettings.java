@@ -18,14 +18,33 @@ public final class PatchSettings {
     private static final String THEME_SURFACE = "theme_surface";
     private static final String THEME_PRESET = "theme_preset";
     private static volatile SharedPreferences preferences;
+    private static volatile String startupState;
+    private static volatile boolean restartMarked;
 
     private PatchSettings() {}
 
     public static void initialize(Context context) {
         preferences = context.getApplicationContext().getSharedPreferences(FILE, Context.MODE_PRIVATE);
+        startupState = restartState();
+        restartMarked = false;
         if (InstalledPatches.homePins()) HomePins.initialize(context);
         if (InstalledPatches.serverFiles()) ServerConfig.initialize(context);
         if (InstalledPatches.themeColors() && context instanceof Application) ThemeOverlay.install((Application) context);
+    }
+
+    /** True when a setting that Spotify reads at startup differs from the value this process started with. */
+    public static boolean restartRequired() {
+        return restartMarked || (startupState != null && !startupState.equals(restartState()));
+    }
+
+    /** Records a change kept outside these preferences, such as Home pins, that applies after a restart. */
+    public static void markRestartRequired() {
+        restartMarked = true;
+    }
+
+    private static String restartState() {
+        return hidePremiumTabEnabled() + "|" + hideBrandAdsEnabled() + "|" + hidePlayerAdCardsEnabled() + "|"
+                + themeBackground() + "|" + themeSurface() + "|" + themeAccent();
     }
 
     /** False until Spotify's Application has loaded the Spicetify settings. */

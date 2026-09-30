@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.text.TextUtils;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -19,6 +20,8 @@ public final class SpicetifySettingsActivity extends Activity {
     public static final String PAGE_SHARING = "sharing";
     public static final String PAGE_APPEARANCE = "appearance";
     public static final String PAGE_SERVER = "server";
+
+    private View restartBar;
 
     public static void open(Activity activity) {
         activity.startActivity(new Intent(activity, SpicetifySettingsActivity.class));
@@ -55,7 +58,20 @@ public final class SpicetifySettingsActivity extends Activity {
             buildRoot(content);
         }
         setTitle(title);
-        setContentView(SpotifyStyle.screen(this, title, content));
+        restartBar = SpotifyStyle.restartBar(this, view -> SpotifyRestart.restart(this));
+        setContentView(SpotifyStyle.screen(this, title, content, restartBar));
+        refreshRestartBar();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshRestartBar();
+    }
+
+    /** Shows the restart bar while a setting read at startup is waiting for Spotify to restart. */
+    void refreshRestartBar() {
+        if (restartBar != null) restartBar.setVisibility(PatchSettings.restartRequired() ? View.VISIBLE : View.GONE);
     }
 
     private void buildRoot(LinearLayout content) {
@@ -92,29 +108,35 @@ public final class SpicetifySettingsActivity extends Activity {
     private void buildAds(LinearLayout content) {
         if (InstalledPatches.hideBrandAds()) {
             SpotifyStyle.toggleRow(content, "Hide Home and Browse ads",
-                    "Hide image and video brand-ad sections on Home and Browse. Restart Spotify after changing this. "
-                            + "Audio ads and upgrade prompts are unchanged.",
-                    PatchSettings.hideBrandAdsEnabled(), (button, enabled) -> PatchSettings.setHideBrandAdsEnabled(enabled));
+                    "Hide image and video brand-ad sections on Home and Browse. Audio ads and upgrade prompts are unchanged.",
+                    PatchSettings.hideBrandAdsEnabled(), (button, enabled) -> {
+                        PatchSettings.setHideBrandAdsEnabled(enabled);
+                        refreshRestartBar();
+                    });
         }
         if (InstalledPatches.hidePlayerAdCards()) {
             SpotifyStyle.toggleRow(content, "Hide player ad cards",
-                    "Hide brand-ad cards and ads that replace the cover art in Now Playing. "
-                            + "Restart Spotify after changing this. Audio ads are unchanged.",
-                    PatchSettings.hidePlayerAdCardsEnabled(), (button, enabled) -> PatchSettings.setHidePlayerAdCardsEnabled(enabled));
+                    "Hide brand-ad cards and ads that replace the cover art in Now Playing. Audio ads are unchanged.",
+                    PatchSettings.hidePlayerAdCardsEnabled(), (button, enabled) -> {
+                        PatchSettings.setHidePlayerAdCardsEnabled(enabled);
+                        refreshRestartBar();
+                    });
         }
     }
 
     private void buildHome(LinearLayout content) {
         if (InstalledPatches.hidePremiumTab()) {
             SpotifyStyle.toggleRow(content, "Hide Premium tab",
-                    "Hide the Premium tab in navigation. Restart Spotify after changing this. "
-                            + "Your subscription and other ads are unchanged.",
-                    PatchSettings.hidePremiumTabEnabled(), (button, enabled) -> PatchSettings.setHidePremiumTabEnabled(enabled));
+                    "Hide the Premium tab in navigation. Your subscription and other ads are unchanged.",
+                    PatchSettings.hidePremiumTabEnabled(), (button, enabled) -> {
+                        PatchSettings.setHidePremiumTabEnabled(enabled);
+                        refreshRestartBar();
+                    });
         }
         if (InstalledPatches.homePins()) {
             SpotifyStyle.actionRow(content, "Pinned Home shortcuts",
                     "Choose which shortcuts appear first when Spotify includes them on Home. "
-                            + "Return to Home once to load the choices. Restart Spotify after changing pins.",
+                            + "Return to Home once to load the choices.",
                     view -> chooseHomePins());
         }
     }
@@ -169,7 +191,9 @@ public final class SpicetifySettingsActivity extends Activity {
                         Toast.makeText(this, changedSelection.getMessage(), Toast.LENGTH_LONG).show();
                         return false;
                     }
-                    new SpotifySheet(this, "Pins saved", "Restart Spotify to refresh Home.").primary("OK", () -> true).show();
+                    PatchSettings.markRestartRequired();
+                    refreshRestartBar();
+                    SpotifyRestart.prompt(this, "Restart Spotify to update Home?");
                     return true;
                 })
                 .secondary("Cancel")

@@ -51,7 +51,7 @@ final class ThemeSettings {
 
     private ThemeSettings() {}
 
-    static void build(Activity activity, LinearLayout content) {
+    static void build(SpicetifySettingsActivity activity, LinearLayout content) {
         String scope = ThemeOverlay.active() ? "" : " On this Android version, fewer screens change.";
         TextView intro = SpotifyStyle.body(activity, "Restart Spotify to apply a theme. "
                 + "Some screens and hardcoded colors keep Spotify's own colors." + scope);
@@ -62,14 +62,14 @@ final class ThemeSettings {
         for (Theme theme : THEMES) {
             boolean selected = theme.key == null ? preset == null : theme.key.equals(preset);
             SpotifyStyle.themeRow(content, theme.name, null, new int[] {theme.background, theme.surface, theme.accent}, selected,
-                    view -> save(activity, content, theme.key, theme.key == null ? null : theme.background,
+                    view -> save(activity, content, theme.name, theme.key, theme.key == null ? null : theme.background,
                             theme.key == null ? null : theme.surface, theme.key == null ? null : theme.accent));
         }
         boolean custom = CUSTOM.equals(preset);
         SpotifyStyle.themeRow(content, "Custom", "Pick each color yourself",
                 new int[] {ThemeOverlay.background(), ThemeOverlay.surface(), ThemeOverlay.accent()}, custom,
                 view -> {
-                    if (!custom) save(activity, content, CUSTOM, ThemeOverlay.background(), ThemeOverlay.surface(), ThemeOverlay.accent());
+                    if (!custom) save(activity, content, "your colors", CUSTOM, ThemeOverlay.background(), ThemeOverlay.surface(), ThemeOverlay.accent());
                 });
         if (!custom) return;
 
@@ -77,13 +77,13 @@ final class ThemeSettings {
                 SpotifyStyle.dp(activity, 24), SpotifyStyle.dp(activity, 16), SpotifyStyle.dp(activity, 8));
         SpotifyStyle.colorRow(content, "Background", ThemeOverlay.background(),
                 view -> pick(activity, "Background color", ThemeOverlay.background(), BACKGROUNDS,
-                        color -> save(activity, content, CUSTOM, color, PatchSettings.themeSurface(), PatchSettings.themeAccent())));
+                        color -> save(activity, content, "your colors", CUSTOM, color, PatchSettings.themeSurface(), PatchSettings.themeAccent())));
         SpotifyStyle.colorRow(content, "Surface", ThemeOverlay.surface(),
                 view -> pick(activity, "Surface color", ThemeOverlay.surface(), SURFACES,
-                        color -> save(activity, content, CUSTOM, PatchSettings.themeBackground(), color, PatchSettings.themeAccent())));
+                        color -> save(activity, content, "your colors", CUSTOM, PatchSettings.themeBackground(), color, PatchSettings.themeAccent())));
         SpotifyStyle.colorRow(content, "Accent", ThemeOverlay.accent(),
                 view -> pick(activity, "Accent color", ThemeOverlay.accent(), ACCENTS,
-                        color -> save(activity, content, CUSTOM, PatchSettings.themeBackground(), PatchSettings.themeSurface(), color)));
+                        color -> save(activity, content, "your colors", CUSTOM, PatchSettings.themeBackground(), PatchSettings.themeSurface(), color)));
     }
 
     interface Choice {
@@ -98,7 +98,7 @@ final class ThemeSettings {
         return digits.length() == 6 ? (int) (0xFF000000L | parsed) : (int) parsed;
     }
 
-    private static void pick(Activity activity, String title, int current, int[] presets, Choice choice) {
+    private static void pick(SpicetifySettingsActivity activity, String title, int current, int[] presets, Choice choice) {
         EditText hex = new EditText(activity);
         hex.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
         hex.setSingleLine(true);
@@ -157,15 +157,19 @@ final class ThemeSettings {
                 .show();
     }
 
-    private static void save(Activity activity, LinearLayout content, String preset, Integer background, Integer surface, Integer accent) {
+    private static void save(SpicetifySettingsActivity activity, LinearLayout content, String name, String preset,
+            Integer background, Integer surface, Integer accent) {
         PatchSettings.setTheme(preset, background, surface, accent);
         content.removeAllViews();
         build(activity, content);
         boolean applied = ThemeOverlay.refresh();
+        activity.refreshRestartBar();
         if (!applied && ThemeOverlay.active()) {
             new SpotifySheet(activity, "Colors not applied",
                     "Spotify could not load the new colors. They are saved and will be tried again when Spotify restarts.")
                     .primary("OK", () -> true).show();
+        } else if (PatchSettings.restartRequired()) {
+            SpotifyRestart.prompt(activity, "Restart Spotify to apply " + name + "?");
         }
     }
 }

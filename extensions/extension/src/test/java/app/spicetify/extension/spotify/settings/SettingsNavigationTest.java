@@ -80,7 +80,7 @@ public class SettingsNavigationTest {
     }
 
     private View row(View view, String description) {
-        if (view.isClickable() && description.contentEquals(view.getContentDescription())) return view;
+        if (view.isClickable() && view.getContentDescription() != null && description.contentEquals(view.getContentDescription())) return view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {

@@ -45,7 +45,13 @@ public class ThemeSettingsTest {
             View root = controller.get().getWindow().getDecorView();
             assertNotNull(row(root, "Spotify, selected"));
             assertNull(row(root, "Background, #121212"));
+            assertEquals(View.GONE, restartBar(root).getVisibility());
             row(root, "OLED").performClick();
+            Dialog prompt = ShadowDialog.getLatestDialog();
+            assertTrue(hasText(prompt.getWindow().getDecorView(), "Restart Spotify to apply OLED?"));
+            button(prompt, "Later").performClick();
+            assertFalse(prompt.isShowing());
+            assertEquals(View.VISIBLE, restartBar(root).getVisibility());
             assertEquals("oled", PatchSettings.themePreset());
             assertEquals(Integer.valueOf(0xFF000000), PatchSettings.themeBackground());
             assertEquals(Integer.valueOf(0xFF121212), PatchSettings.themeSurface());
@@ -103,8 +109,14 @@ public class ThemeSettingsTest {
                 SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup();
     }
 
+    private View restartBar(View root) {
+        Button restart = find(root, "Restart");
+        assertNotNull(restart);
+        return (View) restart.getParent().getParent();
+    }
+
     private View row(View view, String description) {
-        if (view.isClickable() && description.contentEquals(view.getContentDescription())) return view;
+        if (view.isClickable() && view.getContentDescription() != null && description.contentEquals(view.getContentDescription())) return view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {

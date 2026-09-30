@@ -76,7 +76,7 @@ final class SpotifyStyle {
                 Math.min(255, Color.green(color) + amount), Math.min(255, Color.blue(color) + amount));
     }
 
-    static View screen(Activity activity, String title, View content) {
+    static View screen(Activity activity, String title, View content, View footer) {
         activity.getWindow().setStatusBarColor(surface());
         activity.getWindow().setNavigationBarColor(background());
         LinearLayout root = new LinearLayout(activity);
@@ -108,6 +108,7 @@ final class SpotifyStyle {
         scroll.setClipToPadding(false);
         scroll.addView(content, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+        root.addView(footer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         int bottomPadding = dp(activity, 24);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -118,11 +119,36 @@ final class SpotifyStyle {
                 right = Math.max(right, insets.getDisplayCutout().getSafeInsetRight());
             }
             header.setPadding(left, insets.getSystemWindowInsetTop(), right, 0);
-            scroll.setPadding(left, 0, right, insets.getSystemWindowInsetBottom() + bottomPadding);
+            scroll.setPadding(left, 0, right, bottomPadding);
+            footer.setPadding(left, 0, right, 0);
+            root.setPadding(0, 0, 0, insets.getSystemWindowInsetBottom());
             return insets.consumeSystemWindowInsets();
         });
         scroll.setPadding(0, 0, 0, bottomPadding);
         return root;
+    }
+
+    /** A bar that offers to restart Spotify; callers show it only while a restart is pending. */
+    static View restartBar(Context context, View.OnClickListener restart) {
+        LinearLayout bar = new LinearLayout(context);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setBackgroundColor(elevated());
+        LinearLayout inner = new LinearLayout(context);
+        inner.setGravity(Gravity.CENTER_VERTICAL);
+        inner.setPadding(dp(context, 16), dp(context, 12), dp(context, 16), dp(context, 12));
+        TextView message = text(context, "Restart Spotify to apply your changes.", 15, Color.WHITE, Font.REGULAR);
+        LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        messageParams.setMarginEnd(dp(context, 12));
+        inner.addView(message, messageParams);
+        Button button = new Button(context);
+        button.setText("Restart");
+        style(button, true);
+        button.setOnClickListener(restart);
+        inner.addView(button, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 48)));
+        bar.addView(inner, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        bar.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        return bar;
     }
 
     static LinearLayout column(Context context) {
