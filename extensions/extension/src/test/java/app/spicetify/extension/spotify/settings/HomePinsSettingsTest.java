@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import app.spicetify.extension.spotify.home.HomePins;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,7 +30,8 @@ public class HomePinsSettingsTest {
 
     @Test public void emptyPickerExplainsHowToLoadShortcuts() {
         HomePins.initialize(RuntimeEnvironment.getApplication());
-        SpicetifySettingsActivity activity = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup().get();
+        SpicetifySettingsActivity activity = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup().get();
         choose(activity.getWindow().getDecorView()).performClick();
         assertEquals("No Home shortcuts loaded", Shadows.shadowOf(ShadowAlertDialog.getLatestAlertDialog()).getTitle());
     }
@@ -45,7 +45,8 @@ public class HomePinsSettingsTest {
         java.lang.reflect.Method capture = HomePins.class.getDeclaredMethod("captureAndOrder", String[].class, String[].class);
         capture.setAccessible(true);
         capture.invoke(null, new String[]{"spotify:playlist:new"}, new String[]{"New playlist"});
-        SpicetifySettingsActivity activity = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup().get();
+        SpicetifySettingsActivity activity = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup().get();
         choose(activity.getWindow().getDecorView()).performClick();
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         AlertDialog picker = ShadowAlertDialog.getLatestAlertDialog();
@@ -59,12 +60,12 @@ public class HomePinsSettingsTest {
         assertFalse(picker.isShowing());
     }
 
-    private Button choose(View view) {
-        if (view instanceof Button && "Choose pinned shortcuts".contentEquals(((Button) view).getText())) return (Button) view;
+    private View choose(View view) {
+        if (view.isClickable() && "Pinned Home shortcuts".contentEquals(view.getContentDescription())) return view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
-                Button result = choose(group.getChildAt(i));
+                View result = choose(group.getChildAt(i));
                 if (result != null) return result;
             }
         }

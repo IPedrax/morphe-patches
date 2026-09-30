@@ -2,19 +2,11 @@ package app.spicetify.extension.spotify.settings;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
-import android.view.MenuItem;
-import android.view.ViewGroup;
+import android.text.TextUtils;
 import android.widget.LinearLayout;
-import android.widget.CompoundButton;
-import android.widget.Button;
-import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import app.spicetify.extension.spotify.home.HomePins;
@@ -22,106 +14,133 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class SpicetifySettingsActivity extends Activity {
+    public static final String EXTRA_PAGE = "app.spicetify.extension.spotify.settings.page";
+    public static final String PAGE_ADS = "ads";
+    public static final String PAGE_HOME = "home";
+    public static final String PAGE_SHARING = "sharing";
+    public static final String PAGE_APPEARANCE = "appearance";
+    public static final String PAGE_SERVER = "server";
+
     public static void open(Activity activity) {
         activity.startActivity(new Intent(activity, SpicetifySettingsActivity.class));
     }
 
-    @Override
-    protected void onCreate(Bundle state) {
-        setTheme(android.R.style.Theme_Material);
-        super.onCreate(state);
-        setTitle("Spicetify");
-        if (getActionBar() != null) {
-            getActionBar().setDisplayHomeAsUpEnabled(true);
-            getActionBar().setBackgroundDrawable(new ColorDrawable(Color.rgb(18, 18, 18)));
-        }
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(Color.rgb(18, 18, 18));
-        scroll.setFitsSystemWindows(true);
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        int padding = dp(24);
-        content.setPadding(padding, dp(16), padding, padding);
-        scroll.addView(content, new ScrollView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        boolean sharingInstalled = InstalledPatches.cleanSharing();
-        boolean themeInstalled = InstalledPatches.themeColors();
-        if (sharingInstalled) {
-            addSwitch(content, "Clean sharing links", PatchSettings.cleanSharingEnabled(),
-                    (button, enabled) -> PatchSettings.setCleanSharingEnabled(enabled));
-            content.addView(text("Remove tracking parameters from Spotify links you share. "
-                    + "Timestamps and playback context are preserved. Changes apply immediately.", false));
-        }
-
-        if (themeInstalled) {
-            TextView heading = text("Theme colors", true);
-            heading.setPadding(0, dp(24), 0, 0);
-            content.addView(heading);
-            content.addView(text("Your colors were selected in Morphe Manager. "
-                    + "Change those options and repatch Spotify to use different colors.", false));
-        }
-
-        if (InstalledPatches.hidePremiumTab()) {
-            addSwitch(content, "Hide Premium tab", PatchSettings.hidePremiumTabEnabled(),
-                    (button, enabled) -> PatchSettings.setHidePremiumTabEnabled(enabled));
-            content.addView(text("Hide the Premium tab in navigation. Restart Spotify after changing this. "
-                    + "Your subscription and other ads are unchanged.", false));
-        }
-
-        if (InstalledPatches.hideBrandAds()) {
-            addSwitch(content, "Hide Home and Browse ads", PatchSettings.hideBrandAdsEnabled(),
-                    (button, enabled) -> PatchSettings.setHideBrandAdsEnabled(enabled));
-            content.addView(text("Hide image and video brand-ad sections on Home and Browse. "
-                    + "Restart Spotify after changing this. Audio ads, player ads, and upgrade prompts are unchanged.", false));
-        }
-
-        if (InstalledPatches.hidePlayerAdCards()) {
-            addSwitch(content, "Hide player ad cards", PatchSettings.hidePlayerAdCardsEnabled(),
-                    (button, enabled) -> PatchSettings.setHidePlayerAdCardsEnabled(enabled));
-            content.addView(text("Hide image brand-ad cards in Now Playing. "
-                    + "Restart Spotify after changing this. Audio ads and other player overlays are unchanged.", false));
-        }
-
-        if (InstalledPatches.homePins()) {
-            content.addView(text("Home shortcuts", true));
-            content.addView(text("Choose which shortcuts appear first when Spotify includes them on Home. "
-                    + "Return to Home once to load the choices. Restart Spotify after changing pins.", false));
-            Button choose = new Button(this);
-            choose.setText("Choose pinned shortcuts");
-            choose.setOnClickListener(view -> chooseHomePins());
-            content.addView(choose);
-        }
-
-        if (InstalledPatches.serverFiles()) {
-            content.addView(new ServerFilesSettings(this));
-        }
-
-        if (!sharingInstalled && !themeInstalled && !InstalledPatches.homePins()
-                && !InstalledPatches.serverFiles() && !InstalledPatches.hidePremiumTab()
-                && !InstalledPatches.hideBrandAds() && !InstalledPatches.hidePlayerAdCards()) {
-            content.addView(text("No configurable Spicetify patches are installed.", false));
-        }
-        setContentView(scroll);
+    public static Intent page(Context context, String page) {
+        return new Intent(context, SpicetifySettingsActivity.class).putExtra(EXTRA_PAGE, page);
     }
 
-    private void addSwitch(LinearLayout content, String label, boolean checked,
-            CompoundButton.OnCheckedChangeListener listener) {
-        Switch toggle = new Switch(this);
-        toggle.setText(label);
-        toggle.setTextSize(18);
-        toggle.setTextColor(Color.WHITE);
-        toggle.setMinHeight(dp(56));
-        toggle.setSwitchPadding(dp(24));
-        toggle.setThumbTintList(new ColorStateList(
-                new int[][] {new int[] {android.R.attr.state_checked}, new int[0]},
-                new int[] {Color.rgb(30, 215, 96), Color.LTGRAY}));
-        toggle.setChecked(checked);
-        toggle.setOnCheckedChangeListener(listener);
-        content.addView(toggle, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    @Override
+    protected void onCreate(Bundle state) {
+        setTheme(android.R.style.Theme_Material_NoActionBar);
+        super.onCreate(state);
+        LinearLayout content = SpotifyStyle.column(this);
+        String page = getIntent().getStringExtra(EXTRA_PAGE);
+        String title;
+        if (PAGE_ADS.equals(page)) {
+            title = "Ads";
+            buildAds(content);
+        } else if (PAGE_HOME.equals(page)) {
+            title = "Home and navigation";
+            buildHome(content);
+        } else if (PAGE_SHARING.equals(page)) {
+            title = "Sharing";
+            buildSharing(content);
+        } else if (PAGE_APPEARANCE.equals(page)) {
+            title = "Appearance";
+            buildAppearance(content);
+        } else if (PAGE_SERVER.equals(page)) {
+            title = "Server files";
+            buildServer(content);
+        } else {
+            title = "Spicetify";
+            buildRoot(content);
+        }
+        setTitle(title);
+        setContentView(SpotifyStyle.screen(this, title, content));
+    }
+
+    private void buildRoot(LinearLayout content) {
+        content.setPadding(0, SpotifyStyle.dp(this, 8), 0, 0);
+        boolean any = false;
+        List<String> ads = new ArrayList<>();
+        if (InstalledPatches.hideBrandAds()) ads.add("Home and Browse");
+        if (InstalledPatches.hidePlayerAdCards()) ads.add("Now Playing");
+        any |= category(content, "encore_icon_ad_free_24", "Ads", ads, PAGE_ADS);
+        List<String> home = new ArrayList<>();
+        if (InstalledPatches.hidePremiumTab()) home.add("Premium tab");
+        if (InstalledPatches.homePins()) home.add("Home shortcuts");
+        any |= category(content, "encore_icon_home_24", "Home and navigation", home, PAGE_HOME);
+        any |= category(content, "encore_icon_share_android_24", "Sharing",
+                InstalledPatches.cleanSharing() ? List.of("Clean sharing links") : List.of(), PAGE_SHARING);
+        any |= category(content, "encore_icon_edit_24", "Appearance",
+                InstalledPatches.themeColors() ? List.of("Theme colors") : List.of(), PAGE_APPEARANCE);
+        any |= category(content, "encore_icon_folder_24", "Server files",
+                InstalledPatches.serverFiles() ? List.of("WebDAV", "Jellyfin") : List.of(), PAGE_SERVER);
+        if (!any) {
+            TextView empty = SpotifyStyle.body(this, "No configurable Spicetify patches are installed.");
+            empty.setPadding(SpotifyStyle.dp(this, 16), SpotifyStyle.dp(this, 16), SpotifyStyle.dp(this, 16), 0);
+            content.addView(empty);
+        }
+    }
+
+    private boolean category(LinearLayout content, String icon, String title, List<String> items, String page) {
+        if (items.isEmpty()) return false;
+        SpotifyStyle.categoryRow(content, icon, title, TextUtils.join(" \u2022 ", items),
+                view -> startActivity(page(this, page)));
+        return true;
+    }
+
+    private void buildAds(LinearLayout content) {
+        if (InstalledPatches.hideBrandAds()) {
+            SpotifyStyle.toggleRow(content, "Hide Home and Browse ads",
+                    "Hide image and video brand-ad sections on Home and Browse. Restart Spotify after changing this. "
+                            + "Audio ads and upgrade prompts are unchanged.",
+                    PatchSettings.hideBrandAdsEnabled(), (button, enabled) -> PatchSettings.setHideBrandAdsEnabled(enabled));
+        }
+        if (InstalledPatches.hidePlayerAdCards()) {
+            SpotifyStyle.toggleRow(content, "Hide player ad cards",
+                    "Hide brand-ad cards and ads that replace the cover art in Now Playing. "
+                            + "Restart Spotify after changing this. Audio ads are unchanged.",
+                    PatchSettings.hidePlayerAdCardsEnabled(), (button, enabled) -> PatchSettings.setHidePlayerAdCardsEnabled(enabled));
+        }
+    }
+
+    private void buildHome(LinearLayout content) {
+        if (InstalledPatches.hidePremiumTab()) {
+            SpotifyStyle.toggleRow(content, "Hide Premium tab",
+                    "Hide the Premium tab in navigation. Restart Spotify after changing this. "
+                            + "Your subscription and other ads are unchanged.",
+                    PatchSettings.hidePremiumTabEnabled(), (button, enabled) -> PatchSettings.setHidePremiumTabEnabled(enabled));
+        }
+        if (InstalledPatches.homePins()) {
+            SpotifyStyle.actionRow(content, "Pinned Home shortcuts",
+                    "Choose which shortcuts appear first when Spotify includes them on Home. "
+                            + "Return to Home once to load the choices. Restart Spotify after changing pins.",
+                    view -> chooseHomePins());
+        }
+    }
+
+    private void buildSharing(LinearLayout content) {
+        if (InstalledPatches.cleanSharing()) {
+            SpotifyStyle.toggleRow(content, "Clean sharing links",
+                    "Remove tracking parameters from Spotify links you share. "
+                            + "Timestamps and playback context are preserved. Changes apply immediately.",
+                    PatchSettings.cleanSharingEnabled(), (button, enabled) -> PatchSettings.setCleanSharingEnabled(enabled));
+        }
+    }
+
+    private void buildAppearance(LinearLayout content) {
+        if (InstalledPatches.themeColors()) {
+            SpotifyStyle.infoRow(content, "Theme colors",
+                    "Your colors were selected in Morphe Manager. Change those options and repatch Spotify to use different colors.");
+        }
+    }
+
+    private void buildServer(LinearLayout content) {
+        if (!InstalledPatches.serverFiles()) return;
+        int padding = SpotifyStyle.dp(this, 16);
+        content.setPadding(padding, 0, padding, 0);
+        content.addView(new ServerFilesSettings(this));
     }
 
     private void chooseHomePins() {
@@ -164,26 +183,4 @@ public final class SpicetifySettingsActivity extends Activity {
         picker.show();
     }
 
-    private TextView text(String value, boolean heading) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextColor(heading ? Color.WHITE : Color.rgb(179, 179, 179));
-        view.setTextSize(heading ? 18 : 14);
-        view.setPadding(0, dp(8), 0, dp(8));
-        if (heading) view.setTypeface(null, Typeface.BOLD);
-        return view;
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 }

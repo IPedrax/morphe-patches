@@ -3,7 +3,6 @@ package app.spicetify.extension.spotify.settings;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -66,22 +65,23 @@ final class ServerFilesSettings extends LinearLayout {
         setOrientation(VERTICAL);
         if (Build.VERSION.SDK_INT >= 26) setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         if (Build.VERSION.SDK_INT < 26) {
-            label(this, "Server files", 18);
             status = label(this, "Server files requires Android 8 or later.", 14);
             return;
         }
 
         ServerConfig.Snapshot saved = ServerConfig.snapshot();
-        label(this, "Server files", 18);
         label(this, "Stream your music from WebDAV or Jellyfin. Enable Local audio files in Spotify's Apps and devices settings to show scanned tracks in Local Files. Turning this off stops new requests and clears the track list.", 14);
         enabled = new Switch(activity);
         enabled.setText("Use server files");
+        SpotifyStyle.style(enabled);
         enabled.setTextColor(Color.WHITE);
+        enabled.setTextSize(17);
+        enabled.setTypeface(SpotifyStyle.font(activity, SpotifyStyle.Font.REGULAR));
         enabled.setMinHeight(dp(56));
         enabled.setChecked(saved.enabled);
         addView(enabled);
 
-        label(this, "Provider", 14);
+        label(this, "Provider", 18);
         RadioGroup providers = new RadioGroup(activity);
         providers.setOrientation(HORIZONTAL);
         webDavChoice = radio(providers, "WebDAV");
@@ -95,7 +95,7 @@ final class ServerFilesSettings extends LinearLayout {
         webDavPassword = input(webDavFields, "Password or app password", "", saved.hasPassword() ? "Saved password" : "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         webDavPassword.setSaveEnabled(false);
         label(webDavFields, "Leave blank to keep the saved password for this folder and username. Use an app password when supported.", 14);
-        Button saveWebDav = button(webDavFields, saved.enabled ? "Save and scan" : "Save");
+        Button saveWebDav = button(webDavFields, saved.enabled ? "Save and scan" : "Save", true);
         saveWebDav.setOnClickListener(view -> saveWebDav());
 
         jellyfinFields = group();
@@ -116,14 +116,14 @@ final class ServerFilesSettings extends LinearLayout {
         change = button(jellyfinFields, "Change music library");
         change.setOnClickListener(view -> loadSavedLibraries());
         showSavedSummary(savedJellyfin);
-        Button quickConnect = button(jellyfinFields, "Use Quick Connect");
+        Button quickConnect = button(jellyfinFields, "Use Quick Connect", true);
         quickConnect.setOnClickListener(view -> startQuickConnect());
         code = label(jellyfinFields, "", 14);
         code.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         jellyfinUser = input(jellyfinFields, "Jellyfin username", savedJellyfin == null ? "" : savedJellyfin.userName, null, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
         jellyfinPassword = input(jellyfinFields, "Jellyfin password", "", "Password", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         jellyfinPassword.setSaveEnabled(false);
-        button(jellyfinFields, "Sign in with password").setOnClickListener(view -> startPasswordSignIn());
+        button(jellyfinFields, "Sign in with password", true).setOnClickListener(view -> startPasswordSignIn());
         librariesView = new LinearLayout(activity);
         librariesView.setOrientation(VERTICAL);
         jellyfinFields.addView(librariesView);
@@ -131,6 +131,7 @@ final class ServerFilesSettings extends LinearLayout {
         watch(jellyfinUrl);
         watch(jellyfinUser);
         watch(jellyfinPassword);
+        label(this, "Library", 18);
         status = label(this, ServerIndex.status(), 14);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         Button browse = button(this, "Browse server music");
@@ -299,7 +300,7 @@ final class ServerFilesSettings extends LinearLayout {
         choices.setOrientation(VERTICAL);
         for (JellyfinClient.MusicLibrary library : libraries) radio(choices, library.name);
         librariesView.addView(choices);
-        button(librariesView, "Save library and scan").setOnClickListener(view -> {
+        button(librariesView, "Save library and scan", true).setOnClickListener(view -> {
             int chosen = choices.getCheckedRadioButtonId();
             if (chosen == -1) { showError("Choose a music library first."); return; }
             int index = choices.indexOfChild(choices.findViewById(chosen));
@@ -384,39 +385,39 @@ final class ServerFilesSettings extends LinearLayout {
         RadioButton choice = new RadioButton(getContext());
         choice.setId(View.generateViewId());
         choice.setText(title);
-        choice.setTextColor(Color.WHITE);
-        choice.setMinHeight(dp(48));
+        SpotifyStyle.style(choice);
         group.addView(choice);
         return choice;
     }
     private Button button(LinearLayout group, String title) {
+        return button(group, title, false);
+    }
+    private Button button(LinearLayout group, String title, boolean primary) {
         Button button = new Button(getContext());
         button.setText(title);
-        button.setMinHeight(dp(48));
-        group.addView(button);
+        SpotifyStyle.style(button, primary);
+        group.addView(button, SpotifyStyle.buttonParams(getContext()));
         return button;
     }
     private TextView label(LinearLayout group, String value, int size) {
-        TextView text = new TextView(getContext());
-        text.setText(value);
-        text.setTextSize(size);
-        text.setTextColor(size == 18 ? Color.WHITE : Color.LTGRAY);
-        text.setPadding(0, dp(12), 0, dp(8));
+        if (size == 18) return SpotifyStyle.sectionTitle(group, value, true);
+        TextView text = SpotifyStyle.body(getContext(), value);
         group.addView(text);
         return text;
     }
     private EditText input(LinearLayout group, String name, String value, String hint, int type) {
-        TextView label = label(group, name, 14);
+        TextView label = SpotifyStyle.text(getContext(), name, 14, Color.WHITE, SpotifyStyle.Font.BOLD);
+        label.setPadding(0, dp(16), 0, dp(8));
+        group.addView(label);
         EditText input = new EditText(getContext());
         input.setId(View.generateViewId());
         label.setLabelFor(input.getId());
         input.setInputType(type);
-        input.setTypeface(Typeface.DEFAULT);
-        input.setTextSize(16);
         input.setSingleLine(true);
         input.setText(value);
         input.setHint(hint);
-        input.setMinHeight(dp(48));
+        SpotifyStyle.style(input);
+        input.setTypeface(SpotifyStyle.font(getContext(), SpotifyStyle.Font.REGULAR));
         group.addView(input, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         return input;
     }

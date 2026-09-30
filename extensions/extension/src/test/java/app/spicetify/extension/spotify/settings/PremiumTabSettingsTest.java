@@ -27,14 +27,16 @@ public class PremiumTabSettingsTest {
         var application = RuntimeEnvironment.getApplication();
         application.deleteSharedPreferences("spicetify_patch_settings");
         PatchSettings.initialize(application);
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup()) {
             Switch toggle = toggle(controller.get().getWindow().getDecorView());
             assertNotNull(toggle);
             assertTrue(toggle.isChecked());
             toggle.performClick();
             assertTrue(PatchSettings.showPremiumTab(true));
         }
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup()) {
             Switch toggle = toggle(controller.get().getWindow().getDecorView());
             assertFalse(toggle.isChecked());
             toggle.performClick();
@@ -44,13 +46,14 @@ public class PremiumTabSettingsTest {
 
     @Test
     public void uninstalledPatchHasNoControl() {
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_HOME)).setup()) {
             assertNull(toggle(controller.get().getWindow().getDecorView()));
         }
     }
 
     private Switch toggle(View view) {
-        if (view instanceof Switch && "Hide Premium tab".contentEquals(((Switch) view).getText())) return (Switch) view;
+        if (view instanceof Switch && view.getContentDescription() != null && view.getContentDescription().toString().startsWith("Hide Premium tab. ")) return (Switch) view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {

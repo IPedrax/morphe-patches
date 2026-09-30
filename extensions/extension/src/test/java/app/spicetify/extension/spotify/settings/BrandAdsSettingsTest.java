@@ -27,14 +27,16 @@ public class BrandAdsSettingsTest {
         var application = RuntimeEnvironment.getApplication();
         application.deleteSharedPreferences("spicetify_patch_settings");
         PatchSettings.initialize(application);
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_ADS)).setup()) {
             Switch toggle = toggle(controller.get().getWindow().getDecorView());
             assertNotNull(toggle);
             assertTrue(toggle.isChecked());
             toggle.performClick();
             assertFalse(PatchSettings.hideBrandAdsEnabled());
         }
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_ADS)).setup()) {
             Switch toggle = toggle(controller.get().getWindow().getDecorView());
             assertFalse(toggle.isChecked());
             toggle.performClick();
@@ -43,14 +45,30 @@ public class BrandAdsSettingsTest {
     }
 
     @Test
+    @Config(shadows = Capabilities.class)
+    public void tappingTheRowTogglesTheSetting() {
+        var application = RuntimeEnvironment.getApplication();
+        application.deleteSharedPreferences("spicetify_patch_settings");
+        PatchSettings.initialize(application);
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(application, SpicetifySettingsActivity.PAGE_ADS)).setup()) {
+            Switch toggle = toggle(controller.get().getWindow().getDecorView());
+            ((View) toggle.getParent()).performClick();
+            assertFalse(toggle.isChecked());
+            assertFalse(PatchSettings.hideBrandAdsEnabled());
+        }
+    }
+
+    @Test
     public void uninstalledPatchHasNoControl() {
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_ADS)).setup()) {
             assertNull(toggle(controller.get().getWindow().getDecorView()));
         }
     }
 
     private Switch toggle(View view) {
-        if (view instanceof Switch && "Hide Home and Browse ads".contentEquals(((Switch) view).getText())) return (Switch) view;
+        if (view instanceof Switch && view.getContentDescription() != null && view.getContentDescription().toString().startsWith("Hide Home and Browse ads. ")) return (Switch) view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {

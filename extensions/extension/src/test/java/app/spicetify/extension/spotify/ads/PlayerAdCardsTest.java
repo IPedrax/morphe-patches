@@ -48,14 +48,16 @@ public class PlayerAdCardsTest {
     @Test
     @Config(shadows = Capabilities.class)
     public void controlPersistsAcrossActivityRecreation() {
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_ADS)).setup()) {
             Switch toggle = toggle(controller.get().getWindow().getDecorView());
             assertNotNull(toggle);
             assertTrue(toggle.isChecked());
             toggle.performClick();
             assertFalse(PatchSettings.hidePlayerAdCardsEnabled());
         }
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_ADS)).setup()) {
             Switch toggle = toggle(controller.get().getWindow().getDecorView());
             assertNotNull(toggle);
             assertFalse(toggle.isChecked());
@@ -63,13 +65,14 @@ public class PlayerAdCardsTest {
     }
 
     @Test public void uninstalledPatchHasNoControl() {
-        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class).setup()) {
+        try (var controller = Robolectric.buildActivity(SpicetifySettingsActivity.class,
+                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_ADS)).setup()) {
             assertNull(toggle(controller.get().getWindow().getDecorView()));
         }
     }
 
     private Switch toggle(View view) {
-        if (view instanceof Switch && "Hide player ad cards".contentEquals(((Switch) view).getText())) return (Switch) view;
+        if (view instanceof Switch && view.getContentDescription() != null && view.getContentDescription().toString().startsWith("Hide player ad cards. ")) return (Switch) view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int index = 0; index < group.getChildCount(); index++) {
