@@ -8,7 +8,10 @@ abstract class SharedExtensionSources : DefaultTask() {
     @TaskAction fun sync() {
         files.sync {
             from(inputDirectory)
-            exclude("app/spicetify/extension/spotify/settings/InstalledPatches.java")
+            // Every capability reports installed, so new patches appear here without a separate stub.
+            filesMatching("app/spicetify/extension/spotify/settings/InstalledPatches.java") {
+                filter { line -> line.replace("return false;", "return true;") }
+            }
             into(outputDirectory)
         }
     }
