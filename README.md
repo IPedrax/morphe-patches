@@ -5,31 +5,22 @@ This repository publishes patch source and bundles, not Spotify APKs.
 
 <!-- prettier-ignore -->
 > [!NOTE]
-> This is an experimental feature currently under active development.
-> The initial target is Spotify 9.1.80.2221, ARM64. Runtime compatibility is
-> still being verified.
+> These patches target Spotify 9.1.80.2221, ARM64. Other Spotify versions are
+> not supported.
 
-[**➕ Add Spicetify to Morphe**](https://morphe.software/add-source?github=spicetify/morphe-patches/tree/dev)
+[**➕ Add Spicetify to Morphe**](https://morphe.software/add-source?github=spicetify/morphe-patches/tree/main)
 
-Open this link on Android with Morphe Manager installed to add the
-experimental source.
+Open this link on Android with Morphe Manager installed to add the stable
+source. Pre-releases are published from the `dev` branch.
 
 ## Patches
 
-The published `dev.4` bundle contains four patches. Clean sharing is enabled
-by default; colors, Home shortcut pinning, and HTTPS WebDAV server files are
-optional.
-Choose theme colors, Home pins, and server files in Spotify's Spicetify
-settings after installation.
+Clean sharing is enabled by default; the other patches are optional. Choose
+theme colors, Home pins, ad and Premium-tab hiding, and server files in
+Spotify's Spicetify settings after installation.
 
-The current source also includes optional **Hide Premium tab**, **Hide Home
-and Browse ads**, and **Hide player ad cards** patches for local testing.
-They are not yet published.
-
-It also includes experimental Jellyfin support in the server-files extension.
-The published `dev.4` bundle supports WebDAV only. Jellyfin requires a local
-build and setup through Spicetify settings.
-The current source also adds server albums and artists to Your Library, after
+Server files stream from an HTTPS WebDAV folder or a Jellyfin library. They
+also add server albums and artists to Your Library, after
 Spotify's own items, with a filter chip named after the provider (for example
 **Jellyfin**) that shows only server items. Tapping a server album opens it and
 plays it in order through Spotify's player; tapping an artist opens the artist.
@@ -68,17 +59,12 @@ Pixel 8 with a 35,000-track Jellyfin library.
 
 <!-- PATCHES_END -->
 
-## Try the experimental source
+## Install
 
-The current [experimental release](https://github.com/spicetify/morphe-patches/releases/tag/v1.0.0-dev.4)
-is `1.0.0-dev.4`. Manager 1.31.1 downloads all four patches, and its default
-profile was patched and installed on a Pixel 8 while preserving login and
-the sharing setting. Runtime testing also covers Home pinning, synthetic
-server playback and seeking, interrupted scans, and recovery on that device.
-There is no stable release.
+Releases are listed on the [releases page](https://github.com/spicetify/morphe-patches/releases).
+Version 1.0.0 was patched with Morphe Manager and tested on a Pixel 8.
 
-Use a spare Android device or emulator for the initial tests. A patched APK
-uses a different signing certificate from stock Spotify. Installing it with
+A patched APK uses a different signing certificate from stock Spotify. Installing it with
 the same package name requires removing stock Spotify first, which removes
 its local app data and downloads. Keep Manager's signing key for future
 updates; a different key requires another uninstall.
@@ -91,8 +77,10 @@ instead of adding it again. To add it manually and patch Spotify:
 2. Paste the following source URL, then select **Add**.
 
    ```text
-   https://raw.githubusercontent.com/spicetify/morphe-patches/refs/heads/dev/patches-bundle.json
+   https://raw.githubusercontent.com/spicetify/morphe-patches/refs/heads/main/patches-bundle.json
    ```
+
+   For pre-releases, use the same URL with `dev` in place of `main`.
 
 3. Expand **Spicetify Android patches** and enable **Experimental app versions**.
 4. Return to the app list. Spotify appears with the target version
@@ -113,12 +101,12 @@ instead of adding it again. To add it manually and patch Spotify:
    the data loss described above. Confirm installation in Android's dialog.
 9. Open Spotify from Android's app launcher. Sign in if needed.
 
-This feed stays on experimental releases. Keep your own stock APK or split-APK
-archive for patching; the repository does not distribute Spotify.
+Keep your own stock APK or split-APK archive for patching; the repository does
+not distribute Spotify.
 
 ## Change settings in Spotify
 
-Version `1.0.0-dev.3` adds a **Spicetify** row to Spotify's settings.
+Patched Spotify has a **Spicetify** row in its settings.
 
 1. Open your profile menu, then **Settings and privacy**.
 2. Scroll down and select **Spicetify**, just above **Log out**.
