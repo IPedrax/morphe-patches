@@ -123,8 +123,8 @@ Version `1.0.0-dev.3` adds a **Spicetify** row to Spotify's settings.
 
 Only installed patches appear here, grouped by category. With **Theme colors**
 installed, **Appearance** lists themes, including OLED, and a **Custom** option
-for picking background, surface, and accent colors; restart Spotify to apply
-a change. Home pins and server files have their own
+for picking background, surface, and accent colors. Settings that Spotify
+reads at startup, such as themes, offer to restart Spotify for you. Home pins and server files have their own
 controls here when installed.
 
 For server files, enter an HTTPS WebDAV folder URL and credentials in
