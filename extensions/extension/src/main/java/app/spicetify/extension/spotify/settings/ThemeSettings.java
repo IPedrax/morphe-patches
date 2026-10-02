@@ -51,7 +51,7 @@ final class ThemeSettings {
 
     private ThemeSettings() {}
 
-    static void build(SpicetifySettingsActivity activity, LinearLayout content) {
+    static void build(SpicetifySettingsScreen activity, LinearLayout content) {
         String scope = ThemeOverlay.active() ? "" : " On this Android version, fewer screens change.";
         TextView intro = SpotifyStyle.body(activity, "Restart Spotify to apply a theme. "
                 + "Some screens and hardcoded colors keep Spotify's own colors." + scope);
@@ -98,7 +98,7 @@ final class ThemeSettings {
         return digits.length() == 6 ? (int) (0xFF000000L | parsed) : (int) parsed;
     }
 
-    private static void pick(SpicetifySettingsActivity activity, String title, int current, int[] presets, Choice choice) {
+    private static void pick(SpicetifySettingsScreen activity, String title, int current, int[] presets, Choice choice) {
         EditText hex = new EditText(activity);
         hex.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
         hex.setSingleLine(true);
@@ -157,7 +157,7 @@ final class ThemeSettings {
                 .show();
     }
 
-    private static void save(SpicetifySettingsActivity activity, LinearLayout content, String name, String preset,
+    private static void save(SpicetifySettingsScreen activity, LinearLayout content, String name, String preset,
             Integer background, Integer surface, Integer accent) {
         PatchSettings.setTheme(preset, background, surface, accent);
         content.removeAllViews();

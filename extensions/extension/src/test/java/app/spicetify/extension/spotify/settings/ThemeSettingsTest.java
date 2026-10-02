@@ -1,5 +1,6 @@
 package app.spicetify.extension.spotify.settings;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,7 +43,7 @@ public class ThemeSettingsTest {
 
     @Test public void choosingAThemeSavesItsColorsAndSpotifyClearsThem() {
         try (var controller = appearance()) {
-            View root = controller.get().getWindow().getDecorView();
+            View root = ShadowDialog.getLatestDialog().getWindow().getDecorView();
             assertNotNull(row(root, "Spotify, selected"));
             assertNull(row(root, "Background, #121212"));
             assertEquals(View.GONE, restartBar(root).getVisibility());
@@ -67,7 +68,7 @@ public class ThemeSettingsTest {
 
     @Test public void customStartsFromTheCurrentThemeAndEditsOneColor() {
         try (var controller = appearance()) {
-            View root = controller.get().getWindow().getDecorView();
+            View root = ShadowDialog.getLatestDialog().getWindow().getDecorView();
             row(root, "OLED").performClick();
             row(root, "Custom").performClick();
             assertEquals(ThemeSettings.CUSTOM, PatchSettings.themePreset());
@@ -92,21 +93,22 @@ public class ThemeSettingsTest {
                 .putInt("theme_background", 0xFF0B1026).commit();
         assertEquals(ThemeSettings.CUSTOM, PatchSettings.themePreset());
         try (var controller = appearance()) {
-            assertNotNull(row(controller.get().getWindow().getDecorView(), "Custom, selected"));
+            assertNotNull(row(ShadowDialog.getLatestDialog().getWindow().getDecorView(), "Custom, selected"));
         }
     }
 
     @Test @Config(sdk = 29) public void androidTenOffersThemesWithANote() {
         try (var controller = appearance()) {
-            View root = controller.get().getWindow().getDecorView();
+            View root = ShadowDialog.getLatestDialog().getWindow().getDecorView();
             assertNotNull(row(root, "OLED"));
             assertTrue(hasTextContaining(root, "fewer screens change"));
         }
     }
 
-    private org.robolectric.android.controller.ActivityController<SpicetifySettingsActivity> appearance() {
-        return Robolectric.buildActivity(SpicetifySettingsActivity.class,
-                SpicetifySettingsActivity.page(RuntimeEnvironment.getApplication(), SpicetifySettingsActivity.PAGE_APPEARANCE)).setup();
+    private org.robolectric.android.controller.ActivityController<Activity> appearance() {
+        var controller = Robolectric.buildActivity(Activity.class).setup();
+        SpicetifySettingsScreen.open(controller.get(), SpicetifySettingsScreen.PAGE_APPEARANCE);
+        return controller;
     }
 
     private View restartBar(View root) {

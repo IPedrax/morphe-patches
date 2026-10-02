@@ -86,7 +86,7 @@ are chosen at runtime, so the checker requires every color resource to match
 the stock APK. It also checks that each pinned Encore palette class remaps
 every stock theme constant it loads. It verifies color values and IDs, equivalent relocated XML
 selectors, the local builder hook, both final URL hooks, the preference-aware
-wrapper, the private settings Activity, unchanged permissions, and the APK
+wrapper, the settings dialog host, unchanged permissions, and the APK
 signature. It also compares all four installed settings bridge classes with
 the exact bundle used for patching, including their code and class metadata.
 This catches missing or replaced menu code that still has valid references.
@@ -104,6 +104,8 @@ original flag while negating the hide preference. Synthetic DEX tests reject
 misplaced or missing hooks, mismatched capabilities, and altered helper logic.
 The four-argument Java settings checker remains available for `dev.3` APKs;
 the Python checker expects capability methods for the selected features.
+APKs whose settings are an Activity, v1.0.1 and earlier, need the scripts
+from their release tag.
 
 Add `--hide-brand-ads` for **Hide Home and Browse ads**. Its checker verifies
 all three list consumers, getter placement, registers, and the native iterator
@@ -139,8 +141,8 @@ cases against your private APK:
 ```
 
 Use an APK built from the current checkout's bridge. These tests remove or
-miswire startup, menu, capability, analytics, Activity, and bridge instructions
-in memory, including empty menu and navigation implementations. The stock
+miswire startup, menu, capability, analytics, settings screen, and bridge
+instructions in memory, including empty menu and navigation implementations. The stock
 and patched APKs stay unchanged. CI cannot
 run these cases without a privately supplied Spotify fixture.
 

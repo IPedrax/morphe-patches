@@ -1,6 +1,6 @@
 package app.spicetify.extension.spotify.settings;
 
-import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
@@ -17,6 +17,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -76,41 +77,44 @@ final class SpotifyStyle {
                 Math.min(255, Color.green(color) + amount), Math.min(255, Color.blue(color) + amount));
     }
 
-    static View screen(Activity activity, String title, View content, View footer) {
-        activity.getWindow().setStatusBarColor(surface());
-        activity.getWindow().setNavigationBarColor(background());
-        LinearLayout root = new LinearLayout(activity);
+    /** A full-screen page in the dialog's window; its back button closes the dialog like Back does. */
+    static View screen(Dialog dialog, String title, View content, View footer) {
+        Context context = dialog.getContext();
+        Window window = dialog.getWindow();
+        window.setStatusBarColor(surface());
+        window.setNavigationBarColor(background());
+        LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(background());
 
-        FrameLayout header = new FrameLayout(activity);
+        FrameLayout header = new FrameLayout(context);
         header.setBackgroundColor(surface());
-        FrameLayout bar = new FrameLayout(activity);
-        header.addView(bar, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(activity, 56)));
-        View back = backButton(activity);
-        back.setOnClickListener(view -> activity.finish());
-        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(dp(activity, 48), dp(activity, 48),
+        FrameLayout bar = new FrameLayout(context);
+        header.addView(bar, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 56)));
+        View back = backButton(context);
+        back.setOnClickListener(view -> dialog.cancel());
+        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(dp(context, 48), dp(context, 48),
                 Gravity.START | Gravity.CENTER_VERTICAL);
-        backParams.setMarginStart(dp(activity, 4));
+        backParams.setMarginStart(dp(context, 4));
         bar.addView(back, backParams);
-        TextView heading = text(activity, title, 18, Color.WHITE, Font.TITLE);
+        TextView heading = text(context, title, 18, Color.WHITE, Font.TITLE);
         heading.setSingleLine(true);
         heading.setEllipsize(TextUtils.TruncateAt.END);
         heading(heading);
         FrameLayout.LayoutParams headingParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-        headingParams.setMargins(dp(activity, 64), 0, dp(activity, 64), 0);
+        headingParams.setMargins(dp(context, 64), 0, dp(context, 64), 0);
         bar.addView(heading, headingParams);
         root.addView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        ScrollView scroll = new ScrollView(activity);
+        ScrollView scroll = new ScrollView(context);
         scroll.setFillViewport(true);
         scroll.setClipToPadding(false);
         scroll.addView(content, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
         root.addView(footer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        int bottomPadding = dp(activity, 24);
+        int bottomPadding = dp(context, 24);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             int left = insets.getSystemWindowInsetLeft();
             int right = insets.getSystemWindowInsetRight();
