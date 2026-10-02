@@ -65,6 +65,15 @@ def manifest_blocks(aapt2, apk):
 
 def verify_manifest(aapt2, stock, patched, server_files=False):
     before, after = (manifest_blocks(aapt2, apk) for apk in (stock, patched))
+    browsers = [body for kind, body in after if kind == "activity"
+                and '="app.spicetify.extension.spotify.settings.ServerMusicActivity"' in body]
+    if len(browsers) != int(server_files):
+        raise AssertionError("Server browser does not match the selected patches")
+    for browser in browsers:
+        if not re.search(r":exported\(0x[0-9a-f]+\)=false", browser):
+            raise AssertionError("Server browser activity must be non-exported")
+        if "E: intent-filter" in browser:
+            raise AssertionError("Server browser activity must have no public intent filter")
     providers = [body for kind, body in after if kind == "provider"
                  and '="app.spicetify.extension.spotify.localserver.ServerFileProvider"' in body]
     if len(providers) != int(server_files):
@@ -78,6 +87,12 @@ def verify_manifest(aapt2, stock, patched, server_files=False):
             raise AssertionError("Server provider authority changed")
         if "E: grant-uri-permission" in provider or "E: intent-filter" in provider:
             raise AssertionError("Server provider must not expose URI grants or intent filters")
+    # A root mount install keeps the stock manifest, so it never registers a component a patch adds.
+    # Server files, which mount installs can't select, add only the browser and provider above.
+    for kind in ("activity", "activity-alias", "service", "receiver", "provider"):
+        added = sum(k == kind for k, _ in after) - sum(k == kind for k, _ in before)
+        if added != (int(server_files) if kind in ("activity", "provider") else 0):
+            raise AssertionError(f"Patches must not add a manifest {kind}")
     def permissions(blocks):
         return sorted(re.sub(r" \(line=\d+\)", "", body)
                       for kind, body in blocks if kind.startswith("uses-permission"))
