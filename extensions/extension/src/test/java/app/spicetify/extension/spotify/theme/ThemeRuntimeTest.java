@@ -137,4 +137,28 @@ public class ThemeRuntimeTest {
         assertEquals(Integer.valueOf(ArgbColors.mix(0xFFFF6437, 0xFF000000, 0.125)), custom.get("button-active"));
         assertFalse(custom.containsKey("card"));
     }
+
+    @Test
+    @Config(shadows = Patched.class)
+    public void theThemeSavedByVersion10AppliesAtTheNextStart() {
+        context.getSharedPreferences("spicetify_patch_settings", 0).edit().putString("theme_preset", "nord")
+                .putInt("theme_background", 0xFF2E3440).putInt("theme_surface", 0xFF3B4252)
+                .putInt("theme_accent", 0xFF88C0D0).commit();
+        ThemeRuntime.install(context);
+        assertEquals("nord", ThemeState.load(context).kind);
+        assertEquals(0xFF2E3440, ThemeRuntime.color("main", 0xFF121212));
+        assertEquals(0xFF3B4252, ThemeRuntime.color("card", 0xFF282828));
+        assertEquals(0xFF88C0D0, ThemeRuntime.color("button", 0xFF1ED760));
+        assertTrue(ThemeRuntime.select(context, ThemeState.Selection.preset(ThemePresets.STOCK, "Spotify")));
+    }
+
+    @Test
+    @Config(shadows = Patched.class)
+    public void anUnreadableOldThemeDoesNotStopTheSavedOne() {
+        ThemeState.save(context, ThemeState.Selection.preset("midnight", "Midnight"));
+        context.getSharedPreferences("spicetify_patch_settings", 0).edit().putString("theme_background", "black").commit();
+        ThemeRuntime.install(context);
+        assertEquals(0xFF0B1026, ThemeRuntime.color("main", 0xFF121212));
+        assertTrue(ThemeRuntime.select(context, ThemeState.Selection.preset(ThemePresets.STOCK, "Spotify")));
+    }
 }

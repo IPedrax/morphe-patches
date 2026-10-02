@@ -27,6 +27,7 @@ public final class ThemeRuntime {
     /** Injection point, from PatchSettings.initialize in SpotifyApplication.onCreate. */
     public static void install(Context context) {
         try {
+            ThemeState.migrate(context);
             if (!supported()) return;
             Application application = (Application) context.getApplicationContext();
             ThemeTable.applyTo(application.getResources());

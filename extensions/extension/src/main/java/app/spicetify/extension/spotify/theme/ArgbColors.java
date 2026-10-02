@@ -12,6 +12,14 @@ final class ArgbColors {
         return (from & 0xFF000000) | (red << 16) | (green << 8) | blue;
     }
 
+    /** Adds {@code amount} to each color channel, up to 255. Keeps alpha. */
+    static int lighten(int argb, int amount) {
+        int red = Math.min(255, ((argb >> 16) & 0xFF) + amount);
+        int green = Math.min(255, ((argb >> 8) & 0xFF) + amount);
+        int blue = Math.min(255, (argb & 0xFF) + amount);
+        return (argb & 0xFF000000) | (red << 16) | (green << 8) | blue;
+    }
+
     private static int channel(int from, int to, double amount) {
         return (int) Math.max(0, Math.min(255, Math.round(from + (to - from) * amount)));
     }

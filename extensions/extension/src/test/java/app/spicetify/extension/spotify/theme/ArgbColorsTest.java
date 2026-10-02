@@ -15,6 +15,12 @@ public class ArgbColorsTest {
     }
 
     @Test
+    public void lighteningStopsAtWhiteAndKeepsAlpha() {
+        assertEquals(0xFF21263C, ArgbColors.lighten(0xFF0B1026, 22));
+        assertEquals(0x80FFFFFF, ArgbColors.lighten(0x80F8F8F8, 24));
+    }
+
+    @Test
     public void contrastFollowsWcag() {
         assertEquals(21.0, ArgbColors.contrast(0xFF000000, 0xFFFFFFFF), 0.01);
         assertEquals(1.0, ArgbColors.contrast(0xFFFFFFFF, 0xFFFFFFFF), 0.0001);
