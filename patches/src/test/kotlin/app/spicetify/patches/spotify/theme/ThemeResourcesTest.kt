@@ -41,6 +41,26 @@ class ThemeResourcesTest {
         assertThrows(IllegalArgumentException::class.java) { roleTable(duplicated, roleMap) }
     }
 
+    @Test
+    fun `the Compose table gives each field path its color's stock value`() {
+        val paths = loadComposePaths()
+        assertEquals(listOf(83, 8), paths.map { it.size })
+        val (palette, raw) = composeTable(parse(fixture()), roleMap, paths).split(';')
+        assertEquals(83, palette.split(',').size)
+        assertTrue("a.a.c=dark_base_background_base@FF121212" in palette.split(','))
+        assertTrue("a.a.b.a=dark_base_background_tinted_base@1AFFFFFF" in palette.split(','))
+        assertTrue(raw.startsWith("b.c=gray_7@FF121212,"))
+        assertTrue("d.d=gray_20@FF333333" in raw.split(','))
+    }
+
+    @Test
+    fun `a Compose path following an unmapped color fails with its name`() {
+        val paths = listOf(mapOf("a.a.e" to "dark_base_background_press"), emptyMap())
+        val declared = parse(fixture().replace("</resources>", "<color name=\"dark_base_background_press\">#FF191919</color></resources>"))
+        val failure = assertThrows(IllegalArgumentException::class.java) { composeTable(declared, roleMap, paths) }
+        assertTrue(failure.message!!.contains("dark_base_background_press"))
+    }
+
     /** Every mapped color. The alias and the translucent colors carry their 9.1.80.2221 stock values; the rest are opaque. */
     private fun fixture(): String {
         val stock = mapOf(

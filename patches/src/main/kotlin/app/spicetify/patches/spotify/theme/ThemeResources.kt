@@ -30,6 +30,15 @@ internal fun loadRoleMap(version: String = THEME_TARGET_VERSION): Map<String, Li
     }.filterValues { it.isNotEmpty() }
 }
 
+/** Compose field paths to the resource each follows: Spotify's default dark Encore palette, then Encore's raw colors. */
+internal fun loadComposePaths(version: String = THEME_TARGET_VERSION): List<Map<String, String>> {
+    val properties = themeProperties(version)
+    return listOf("compose.", "primitive.").map { prefix ->
+        properties.stringPropertyNames().filter { it.startsWith(prefix) }.sorted()
+            .associate { it.removePrefix(prefix) to properties.getProperty(it).trim() }
+    }
+}
+
 internal fun colorElements(document: Document): List<Element> {
     val children = document.documentElement.childNodes
     return (0 until children.length).mapNotNull { children.item(it) as? Element }.filter { it.tagName == "color" }
@@ -79,6 +88,23 @@ internal fun roleTable(document: Document, roleMap: Map<String, List<String>>): 
         role + ":" + targets.joinToString(",") { name ->
             val alpha = originalAlpha(name, declared)
             if (alpha == 0xFF) name else name + "@" + "%02X".format(alpha)
+        }
+    }
+}
+
+/**
+ * The table ComposeTheme reads: `path=name@AARRGGBB,...;path=...`, palette paths then raw color paths,
+ * with each color's stock value. Fails when a path follows a color no role maps, since nothing would
+ * ever theme it.
+ */
+internal fun composeTable(document: Document, roleMap: Map<String, List<String>>, paths: List<Map<String, String>>): String {
+    val mapped = roleMap.values.flatten().toSet()
+    val declared = colorElements(document).associate { it.getAttribute("name") to it.textContent.trim() }
+    return paths.joinToString(";") { section ->
+        section.entries.joinToString(",") { (path, name) ->
+            require(name in mapped) { "Compose color $path follows $name, which no theme role maps." }
+            val stock = requireNotNull(stockColor(name, declared)) { "Compose color $path: $name has no stock color." }
+            "$path=$name@%08X".format(stock)
         }
     }
 }

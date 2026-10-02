@@ -164,7 +164,6 @@ def main():
         args.java, "-Xmx2g", "-cp", str(args.desktop),
         str(Path(__file__).with_name("VerifyThemeDex.java")),
         str(args.patched), "1" if args.theme else "0",
-        str(Path(__file__).resolve().parent.parent / "patches/src/main/resources/theme/palette-9.1.80.2221.properties"),
     ], check=True)
     subprocess.run([
         args.java, "-Xmx2g", "-cp", str(args.desktop),

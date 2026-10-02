@@ -83,8 +83,10 @@ Use your installed build-tools version in those paths. Run with Java 21 on
 `PATH`, or supply `--java "$JAVA_HOME/bin/java"`. Omit `--sharing` when that
 patch is disabled. Omit `--theme` when that patch is disabled. Theme colors
 are chosen at runtime, so the checker requires every color resource to match
-the stock APK. It also checks that each pinned Encore palette class remaps
-every stock theme constant it loads. It verifies color values and IDs, equivalent relocated XML
+the stock APK. With `--theme`, it also checks that Spotify's default Encore
+palette, its raw colors, and two #282828 surfaces pass through the theme's
+Compose hooks, and that the extension holds the role and Compose tables;
+without it, none of these may be present. It verifies color values and IDs, equivalent relocated XML
 selectors, the local builder hook, both final URL hooks, the preference-aware
 wrapper, the settings dialog host, no added manifest components apart from
 server files, unchanged permissions, and the APK signature. It also compares
