@@ -34,7 +34,7 @@ Pixel 8 with a 35,000-track Jellyfin library.
 | Clean sharing links | Enabled | Removes `si`, `pi`, and known `utm_*` parameters from `open.spotify.com` links. Preserves timestamps, context, other parameters, and fragments. |
 | Theme colors | Disabled | Choose a theme such as OLED, Midnight, or Nord in Spicetify settings, or pick background, surface, and accent colors yourself, then restart Spotify. Hardcoded colors and some screens keep Spotify's colors; Android 10 and earlier change fewer screens. |
 | Pin shortcuts on Home | Disabled | Moves selected native Home shortcuts first. Configure pins in Spotify's Spicetify settings, then restart Spotify. |
-| Local files from a server | Disabled | Streams an HTTPS WebDAV folder or Jellyfin library into Local Files and Your Library, with its own filter chip. Requires Android 8 or later, byte-range support, and Spotify's Local audio files setting; configure the server in Spotify's Spicetify settings. |
+| Local files from a server | Disabled | Streams an HTTPS WebDAV folder or Jellyfin library into Local Files and Your Library, with its own filter chip. Requires Android 8 or later, byte-range support, and Spotify's Local audio files setting; configure the server in Spotify's Spicetify settings. Not available for root mount installs, because its track provider and server browser must be in the manifest. |
 
 <!-- PATCHES_START EXPANDED -->
 > **[v1.0.1](https://github.com/spicetify/morphe-patches/releases/tag/v1.0.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;7 patches total

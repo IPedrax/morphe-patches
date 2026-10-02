@@ -4,6 +4,8 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.util.smali.ExternalLabel
+import app.morphe.patcher.patch.InstallerType
+import app.morphe.patcher.patch.PatchAvailability
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
@@ -46,11 +48,20 @@ private val serverResourcesPatch = resourcePatch {
 val localFilesFromServerPatch = bytecodePatch(
     name = "Local files from a server",
     description = "Streams audio from an HTTPS WebDAV folder or Jellyfin music library into Local Files and Your Library. " +
-        "Configure the server in Spicetify settings; playback needs Spotify's Local audio files setting. Experimental; requires byte-range support.",
+        "Configure the server in Spicetify settings; playback needs Spotify's Local audio files setting. Experimental; requires byte-range support. " +
+        "Not available for root mount installs.",
     default = false,
 ) {
     compatibleWith(spotifyCompatibility)
     dependsOn(settingsPatch, serverResourcesPatch)
+
+    // A root mount install keeps the stock manifest, so the track provider (in its own
+    // :spicetify_server process) and the server browser activity declared above would never be
+    // registered. Manager also uses this resolver for the initial selection, so it, not `default`,
+    // decides whether the patch starts selected.
+    availability { installer, _ ->
+        if (installer == InstallerType.MOUNT) PatchAvailability.UNAVAILABLE else PatchAvailability.DISABLED
+    }
 
     execute {
         val snapshot = Properties().apply {
