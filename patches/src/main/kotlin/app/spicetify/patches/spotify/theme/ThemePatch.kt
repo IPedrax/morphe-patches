@@ -2,6 +2,8 @@ package app.spicetify.patches.spotify.theme
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
@@ -18,9 +20,11 @@ import com.android.tools.smali.dexlib2.iface.instruction.ThreeRegisterInstructio
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import java.util.Properties
+import javax.xml.parsers.DocumentBuilderFactory
 
 internal const val COLOR = "Lp/iae1;->g(J)J"
 private const val MAP = "Lapp/spicetify/extension/spotify/theme/EncorePalette;->map(J)J"
+private const val ROLE_MAP_CLASS = "Lapp/spicetify/extension/spotify/theme/ThemeRoleMap;"
 
 // Stock Encore background and accent constants that the in-app theme replaces.
 internal val paletteColors = listOf(
@@ -28,8 +32,15 @@ internal val paletteColors = listOf(
     0xFF1ED760L, 0xFF3BE477L, 0xFF1ABC54L,
 )
 
+/** Filled by [themeResourcesPatch], which [themePatch] depends on. */
+private var roleTableForExtension: String? = null
+
 private val themeResourcesPatch = resourcePatch {
-    execute { document("res/values/colors.xml").use(::requireThemeColorResources) }
+    execute {
+        // Read-only: the colors keep their stock values.
+        val colors = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(get("res/values/colors.xml"))
+        roleTableForExtension = roleTable(colors, loadRoleMap())
+    }
 }
 
 @Suppress("unused")
@@ -43,6 +54,8 @@ val themePatch = bytecodePatch(
     dependsOn(themeSettingsPatch, themeResourcesPatch)
 
     execute {
+        injectTable(ROLE_MAP_CLASS, "encoded", roleTableForExtension)
+
         val snapshot = Properties().apply {
             NativeSettingsAbi::class.java.getResourceAsStream("/theme/palette-9.1.80.2221.properties")!!.use(::load)
         }
@@ -56,6 +69,13 @@ val themePatch = bytecodePatch(
         // Each pinned class is one of Encore's palette variants; hook every stock theme constant it loads.
         snapshot.stringPropertyNames().sorted().forEach(::hookPalette)
     }
+}
+
+/** Makes the extension's placeholder method return the table the resource patch built. */
+private fun BytecodePatchContext.injectTable(className: String, method: String, table: String?) {
+    requireNotNull(table) { "The theme resource patch did not run first." }
+    mutableClassDefBy(className).methods.single { it.name == method }
+        .replaceInstruction(0, "const-string v0, \"$table\"")
 }
 
 private fun app.morphe.patcher.patch.BytecodePatchContext.hookPalette(type: String) {

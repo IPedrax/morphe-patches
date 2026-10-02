@@ -23,10 +23,11 @@ reference for these features:
 - `patches/src/main/kotlin/app/revanced/patches/spotify/misc/privacy/SanitizeSharingLinksPatch.kt`
 - `extensions/shared/src/main/java/app/revanced/extension/spotify/misc/privacy/SanitizeSharingLinksPatch.java`
 
-The theme resource selection is adapted from that implementation. The local
-patch adds strict color validation, requires every selected resource before
-editing, and limits its scope to backgrounds and accents. It does not import
-the historical extension, animation hooks, or icon assets.
+The theme's color map starts from that implementation's resource selection
+and extends it to the colors listed in `patches/src/main/resources/theme/`,
+checked against Spotify 9.1.80.2221. The patch requires each mapped color
+exactly once and edits no color values. It does not import the historical
+extension, animation hooks, or icon assets.
 
 The sharing implementation uses a new fingerprint for Spotify 9.1.80.2221's
 URL builder. Its new Java helper removes named tracking parameters while
