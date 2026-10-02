@@ -1,9 +1,12 @@
 package app.spicetify.extension.spotify.settings;
 
 import android.app.Activity;
-import android.content.Context;
-import android.content.Intent;
+import android.app.Application;
+import android.app.Dialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.text.TextUtils;
 import android.widget.LinearLayout;
@@ -13,30 +16,50 @@ import app.spicetify.extension.spotify.home.HomePins;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class SpicetifySettingsActivity extends Activity {
-    public static final String EXTRA_PAGE = "app.spicetify.extension.spotify.settings.page";
+/**
+ * One Spicetify settings page, shown as a full-screen dialog over Spotify's activity.
+ * <p>
+ * A root mount install keeps Spotify's stock manifest, so an activity the patch adds never exists
+ * there, and starting one threw {@code ActivityNotFoundException}. Pages stack the way activities
+ * did: Back closes the top one, and the open pages come back when Spotify recreates its activity,
+ * for example on rotation. Each page is a Material-themed context for its views, because Spotify's
+ * own theme restyles framework widgets.
+ */
+public final class SpicetifySettingsScreen extends ContextThemeWrapper {
     public static final String PAGE_ADS = "ads";
     public static final String PAGE_HOME = "home";
     public static final String PAGE_SHARING = "sharing";
     public static final String PAGE_APPEARANCE = "appearance";
     public static final String PAGE_SERVER = "server";
+    private static final String OPEN_PAGES = "app.spicetify.extension.spotify.settings.pages";
+    private static final List<SpicetifySettingsScreen> shown = new ArrayList<>();
+    private static Application tracked;
 
+    private final Activity activity;
+    private final String page;
+    private final Dialog dialog;
     private View restartBar;
 
     public static void open(Activity activity) {
-        activity.startActivity(new Intent(activity, SpicetifySettingsActivity.class));
+        open(activity, null);
     }
 
-    public static Intent page(Context context, String page) {
-        return new Intent(context, SpicetifySettingsActivity.class).putExtra(EXTRA_PAGE, page);
+    /** Shows a page above the open ones; a null or unknown page is the root. */
+    public static void open(Activity activity, String page) {
+        // Showing a dialog on a finishing activity throws, which would crash Spotify.
+        if (activity.isFinishing() || activity.isDestroyed()) return;
+        track(activity.getApplication());
+        SpicetifySettingsScreen screen = new SpicetifySettingsScreen(activity, page);
+        screen.dialog.show();
+        shown.add(screen);
     }
 
-    @Override
-    protected void onCreate(Bundle state) {
-        setTheme(android.R.style.Theme_Material_NoActionBar);
-        super.onCreate(state);
+    private SpicetifySettingsScreen(Activity activity, String page) {
+        super(activity, android.R.style.Theme_Material_NoActionBar);
+        this.activity = activity;
+        this.page = page;
+        dialog = new Dialog(this, android.R.style.Theme_Material_NoActionBar);
         LinearLayout content = SpotifyStyle.column(this);
-        String page = getIntent().getStringExtra(EXTRA_PAGE);
         String title;
         if (PAGE_ADS.equals(page)) {
             title = "Ads";
@@ -57,16 +80,50 @@ public final class SpicetifySettingsActivity extends Activity {
             title = "Spicetify";
             buildRoot(content);
         }
-        setTitle(title);
+        dialog.setTitle(title);
         restartBar = SpotifyStyle.restartBar(this, view -> SpotifyRestart.restart(this));
-        setContentView(SpotifyStyle.screen(this, title, content, restartBar));
+        dialog.setContentView(SpotifyStyle.screen(dialog, title, content, restartBar));
         refreshRestartBar();
+        dialog.setOnDismissListener(closed -> {
+            shown.remove(this);
+            // The page below shows again; refresh it as the activity did when it resumed.
+            for (SpicetifySettingsScreen below : shown) below.refreshRestartBar();
+        });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        refreshRestartBar();
+    /** Keeps the open pages when Spotify recreates its activity, for example on rotation. */
+    private static void track(Application application) {
+        if (tracked == application) return;
+        tracked = application;
+        application.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityCreated(Activity activity, Bundle state) {
+                ArrayList<String> pages = state == null ? null : state.getStringArrayList(OPEN_PAGES);
+                // Reopen them once Spotify has finished creating the new activity.
+                if (pages != null) new Handler(Looper.getMainLooper()).post(() -> {
+                    for (String page : pages) open(activity, page);
+                });
+            }
+
+            @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) {
+                ArrayList<String> pages = new ArrayList<>();
+                for (SpicetifySettingsScreen screen : shown) if (screen.activity == activity) pages.add(screen.page);
+                if (!pages.isEmpty()) state.putStringArrayList(OPEN_PAGES, pages);
+            }
+
+            @Override public void onActivityDestroyed(Activity activity) {
+                // Close its pages before its windows go, so none of them leaks.
+                for (SpicetifySettingsScreen screen : new ArrayList<>(shown)) {
+                    if (screen.activity != activity) continue;
+                    shown.remove(screen);
+                    screen.dialog.dismiss();
+                }
+            }
+
+            @Override public void onActivityStarted(Activity activity) {}
+            @Override public void onActivityResumed(Activity activity) {}
+            @Override public void onActivityPaused(Activity activity) {}
+            @Override public void onActivityStopped(Activity activity) {}
+        });
     }
 
     /** Shows the restart bar while a setting read at startup is waiting for Spotify to restart. */
@@ -101,7 +158,7 @@ public final class SpicetifySettingsActivity extends Activity {
     private boolean category(LinearLayout content, String icon, String title, List<String> items, String page) {
         if (items.isEmpty()) return false;
         SpotifyStyle.categoryRow(content, icon, title, TextUtils.join(" \u2022 ", items),
-                view -> startActivity(page(this, page)));
+                view -> open(activity, page));
         return true;
     }
 

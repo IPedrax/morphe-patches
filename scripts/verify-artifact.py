@@ -65,16 +65,6 @@ def manifest_blocks(aapt2, apk):
 
 def verify_manifest(aapt2, stock, patched, server_files=False):
     before, after = (manifest_blocks(aapt2, apk) for apk in (stock, patched))
-    activity_name = "app.spicetify.extension.spotify.settings.SpicetifySettingsActivity"
-    activities = [body for kind, body in after if kind == "activity"
-                  and f'="{activity_name}"' in body]
-    if len(activities) != 1:
-        raise AssertionError("Expected exactly one Spicetify settings activity")
-    activity = activities[0]
-    if not re.search(r":exported\(0x[0-9a-f]+\)=false", activity):
-        raise AssertionError("Spicetify settings activity must be non-exported")
-    if "E: intent-filter" in activity:
-        raise AssertionError("Spicetify settings activity must have no public intent filter")
     providers = [body for kind, body in after if kind == "provider"
                  and '="app.spicetify.extension.spotify.localserver.ServerFileProvider"' in body]
     if len(providers) != int(server_files):
