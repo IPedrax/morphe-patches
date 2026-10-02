@@ -19,6 +19,7 @@ import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import app.spicetify.extension.spotify.theme.SpicetifyTheme;
+import app.spicetify.extension.spotify.theme.ThemeBackground;
 import app.spicetify.extension.spotify.theme.ThemeException;
 import app.spicetify.extension.spotify.theme.ThemePresets;
 import app.spicetify.extension.spotify.theme.ThemeResolver;
@@ -33,7 +34,8 @@ import java.util.regex.Pattern;
 
 /**
  * The Appearance page: a list of themes, the Spicetify Marketplace, a theme pasted from desktop
- * Spicetify, and individually picked colors as the custom option.
+ * Spicetify, and individually picked colors as the custom option. While a theme draws an image behind
+ * Spotify, its blur switch.
  */
 final class ThemeSettings {
     private static final Pattern HEX = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
@@ -68,6 +70,15 @@ final class ThemeSettings {
             SpotifyStyle.themeRow(content, current.label, null, colors(activity, current), true, view -> {});
             List<String> warnings = ThemeResolver.warnings(current.colors);
             if (!warnings.isEmpty()) content.addView(intro(activity, TextUtils.join(" ", warnings)));
+        }
+        if (ThemeBackground.hasImage(activity)) {
+            SpotifyStyle.toggleRow(content, "Blur background image", "Blur the theme's image behind Spotify's pages.",
+                    ThemeBackground.blurEnabled(activity), (button, enabled) -> {
+                        ThemeBackground.setBlur(activity, enabled);
+                        // Spotify draws the image when its screen is created.
+                        PatchSettings.markRestartRequired();
+                        activity.refreshRestartBar();
+                    });
         }
         SpotifyStyle.actionRow(content, "Spicetify Marketplace", "Browse community themes and use their colors",
                 view -> activity.openPage(SpicetifySettingsScreen.PAGE_MARKETPLACE));
