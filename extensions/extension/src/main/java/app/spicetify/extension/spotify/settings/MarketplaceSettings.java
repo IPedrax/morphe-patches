@@ -23,10 +23,12 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import app.spicetify.extension.spotify.theme.ThemeBackground;
 import app.spicetify.extension.spotify.theme.ThemeException;
 import app.spicetify.extension.spotify.theme.ThemeState;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +38,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The Spicetify Marketplace page: the community themes the desktop Marketplace lists, with their
- * previews and a search. A tapped theme's color.ini downloads, and its color scheme, chosen in a
- * sheet when there's more than one, applies like a theme on Appearance.
+ * The Spicetify Marketplace page: Galaxy V2, then the community themes the desktop Marketplace lists,
+ * with their previews and a search. A tapped theme's color.ini downloads, with Galaxy V2's background
+ * image, and its color scheme, chosen in a sheet when there's more than one, applies like a theme on
+ * Appearance.
  */
 // Built in code by its page host, with English text like every Spicetify page.
 @SuppressLint({"ViewConstructor", "SetTextI18n"})
@@ -51,6 +54,8 @@ final class MarketplaceSettings extends LinearLayout {
     static Executor requests = pool("Spicetify Marketplace requests", 4);
     /** One for the process, so reopening the Marketplace shows the previews it already has. */
     static PreviewImages previews = new PreviewImages(PreviewImages.HTTP, pool("Spicetify previews", 2));
+    /** Background images, which download whole, under the same 8 MB cap as previews. */
+    static PreviewImages.Downloader backgrounds = PreviewImages.HTTP;
     /** The load in flight, which a page opened while it runs takes over; main thread only. */
     static Load running;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -195,9 +200,12 @@ final class MarketplaceSettings extends LinearLayout {
         show();
     }
 
-    /** Lists the themes that match the search, and says what the page is doing. */
+    /** Lists the themes that match the search, Galaxy V2 above the rest, and says what the page is doing. */
     private void show() {
-        List<Marketplace.Theme> shown = Marketplace.filter(themes, search.getText().toString());
+        List<Marketplace.Theme> listed = new ArrayList<>(themes.size() + 1);
+        listed.add(Marketplace.GALAXY_V2);
+        listed.addAll(themes);
+        List<Marketplace.Theme> shown = Marketplace.filter(listed, search.getText().toString());
         adapter.setThemes(shown);
         String message = downloading != null ? "Downloading " + downloading.title + "…"
                 : loading ? "Loading themes…"
@@ -228,14 +236,28 @@ final class MarketplaceSettings extends LinearLayout {
     }
 
     /**
-     * Reads a theme's color.ini on the download thread, and returns what to show for it: its
-     * schemes Spotify can use, or why there are none. Never throws.
+     * Reads a theme's color.ini on the download thread, then the background image it comes with, if
+     * any, and returns what to show for it: its schemes Spotify can use, or why there are none. Never
+     * throws.
      */
     private Runnable download(Marketplace.Theme theme) {
         try {
             Map<String, ThemeState.Selection> schemes = Marketplace.schemes(theme.title, fetcher.get(theme.schemesUrl));
             if (schemes.isEmpty()) return () -> problem(theme.title + " has no colors Spotify can use.");
-            return () -> choose(theme, schemes);
+            byte[] image = null;
+            if (theme.backgroundUrl != null) {
+                // Galaxy V2's image is the point of it, so without it nothing applies.
+                try {
+                    // At about screen size, here, off the main thread, so Spotify's start only reads that.
+                    image = ThemeBackground.fit(screen, backgrounds.get(theme.backgroundUrl));
+                } catch (Exception | OutOfMemoryError e) {
+                    Log.w("Spicetify", "Marketplace background image failed: " + theme.backgroundUrl, e);
+                    String reason = imageProblem(e);
+                    return () -> problem("Couldn't load " + theme.title + "'s background image: " + reason);
+                }
+            }
+            byte[] background = image;
+            return () -> choose(theme, schemes, background);
         } catch (FileNotFoundException | ThemeException missing) {
             return () -> problem(theme.title + " has no color schemes to use on Android.");
         } catch (Throwable e) {
@@ -247,10 +269,20 @@ final class MarketplaceSettings extends LinearLayout {
         }
     }
 
-    /** Applies a theme's only scheme, or asks which one in a sheet that shows each one's colors. */
-    private void choose(Marketplace.Theme theme, Map<String, ThemeState.Selection> schemes) {
+    /** Why an image couldn't be had, in words for the "Theme not applied" sheet. */
+    private static String imageProblem(Throwable e) {
+        if (e instanceof Marketplace.RateLimitException) return MarketplaceLoader.RATE_LIMITED;
+        if (e instanceof OutOfMemoryError) return "It's too large to load.";
+        return MarketplaceLoader.describe(e);
+    }
+
+    /**
+     * Applies a theme's only scheme, or asks which one in a sheet that shows each one's colors, with
+     * the theme's background image, or none.
+     */
+    private void choose(Marketplace.Theme theme, Map<String, ThemeState.Selection> schemes, byte[] image) {
         if (schemes.size() == 1) {
-            apply(schemes.values().iterator().next());
+            apply(schemes.values().iterator().next(), image);
             return;
         }
         SpotifySheet sheet = new SpotifySheet(screen, theme.title, "Choose a color scheme.");
@@ -258,7 +290,7 @@ final class MarketplaceSettings extends LinearLayout {
         for (Map.Entry<String, ThemeState.Selection> scheme : schemes.entrySet()) {
             SpotifyStyle.themeRow(rows, scheme.getKey(), null, ThemeSettings.colors(screen, scheme.getValue()), false, view -> {
                 sheet.dismiss();
-                apply(scheme.getValue());
+                apply(scheme.getValue(), image);
             });
         }
         ScrollView scroll = new ScrollView(screen);
@@ -271,8 +303,8 @@ final class MarketplaceSettings extends LinearLayout {
     }
 
     /** Applies a scheme as Appearance applies a theme: the restart prompt, or why it can't. */
-    private void apply(ThemeState.Selection scheme) {
-        ThemeSettings.apply(screen, scheme.label, scheme);
+    private void apply(ThemeState.Selection scheme, byte[] image) {
+        ThemeSettings.apply(screen, scheme.label, scheme, image);
     }
 
     private void problem(String message) {
@@ -305,12 +337,12 @@ final class MarketplaceSettings extends LinearLayout {
         @Override public View getView(int position, View reusable, ViewGroup parent) {
             Card card = reusable == null ? new Card() : (Card) reusable.getTag();
             Marketplace.Theme theme = shown.get(position);
-            String stars = theme.stars + (theme.stars == 1 ? " star" : " stars");
-            String byline = theme.author + " • " + stars;
+            // Galaxy V2's stars aren't known.
+            String stars = theme.stars < 0 ? null : theme.stars + (theme.stars == 1 ? " star" : " stars");
             card.title.setText(theme.title);
-            card.byline.setText(byline);
+            card.byline.setText(stars == null ? theme.author : theme.author + " • " + stars);
             card.description.setText(theme.description);
-            card.view.setContentDescription(theme.title + ", " + theme.author + ", " + stars);
+            card.view.setContentDescription(theme.title + ", " + theme.author + (stars == null ? "" : ", " + stars));
             previews.load(theme.previewUrl, card.preview, getResources().getDisplayMetrics().widthPixels);
             return card.view;
         }

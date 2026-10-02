@@ -156,14 +156,17 @@ final class Marketplace {
         final String previewUrl;
         final String schemesUrl;
         final String repoUrl;
+        /** Negative when unknown. */
         final int stars;
         /** Position in GitHub's star order, then in the manifest. */
         final int order;
         /** What search matches besides the title: the repository's owner, every author and the tags. */
         final List<String> keywords;
+        /** An image to draw behind Spotify with the theme; null for every GitHub result. */
+        final String backgroundUrl;
 
         Theme(String title, String description, String author, String previewUrl, String schemesUrl,
-                String repoUrl, int stars, int order, List<String> keywords) {
+                String repoUrl, int stars, int order, List<String> keywords, String backgroundUrl) {
             this.title = title;
             this.description = description;
             this.author = author;
@@ -173,8 +176,19 @@ final class Marketplace {
             this.stars = stars;
             this.order = order;
             this.keywords = keywords;
+            this.backgroundUrl = backgroundUrl;
         }
     }
+
+    private static final String GALAXY_FILES = "https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/";
+    /**
+     * Pinned above the GitHub results: Galaxy as the desktop theme shows it, over its background image.
+     * Its files are downloaded from harbassan/spicetify-galaxy when it's shown or applied.
+     */
+    static final Theme GALAXY_V2 = new Theme("Galaxy V2",
+            "Galaxy's colors over its fullscreen background image, the way the desktop theme shows it.", "harbassan",
+            GALAXY_FILES + "preview_playlist.png", GALAXY_FILES + "color.ini", "https://github.com/harbassan/spicetify-galaxy",
+            -1, -1, Collections.singletonList("harbassan"), GALAXY_FILES + "assets/default_bg.jpg");
 
     static final class Page {
         final List<Repo> repos;
@@ -304,7 +318,7 @@ final class Marketplace {
             themes.add(new Theme(cap(title, MAX_NAME_CHARS), cap(description, MAX_DESCRIPTION_CHARS),
                     cap(author(item, repo), MAX_NAME_CHARS),
                     preview.isEmpty() ? null : resolve(preview, repo, branch), resolve(schemes, repo, branch),
-                    repo.url, repo.stars, repoIndex * 1000 + i, keywords(item, repo)));
+                    repo.url, repo.stars, repoIndex * 1000 + i, keywords(item, repo), null));
         }
         return themes;
     }
@@ -397,7 +411,7 @@ final class Marketplace {
             for (int k = 0; k < saved.length(); k++) keywords.add(saved.getString(k));
             themes.add(new Theme(item.getString("title"), item.getString("description"), item.getString("author"),
                     preview.isEmpty() ? null : preview, item.getString("schemes"), item.getString("repo"),
-                    item.getInt("stars"), item.getInt("order"), keywords));
+                    item.getInt("stars"), item.getInt("order"), keywords, null));
         }
         return new Cached(themes, root.getLong("savedAt"));
     }

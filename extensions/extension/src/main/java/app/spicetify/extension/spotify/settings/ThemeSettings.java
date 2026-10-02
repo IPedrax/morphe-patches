@@ -346,12 +346,13 @@ final class ThemeSettings {
     }
 
     /**
-     * Applies and saves a theme. Spotify's views and Compose screens built from then on take it, and
-     * colors some screens read once take it after a restart, so a restart is offered. Returns false,
-     * after saying so, when Spotify can't load the theme's colors.
+     * Applies and saves a theme, with the image it draws behind Spotify, or none. Spotify's views and
+     * Compose screens built from then on take it, and colors some screens read once take it after a
+     * restart, so a restart is offered. Returns false, after saying so, when Spotify can't load the
+     * theme's colors.
      */
-    static boolean apply(SpicetifySettingsScreen activity, String name, ThemeState.Selection theme) {
-        if (!ThemeRuntime.select(activity, theme)) {
+    static boolean apply(SpicetifySettingsScreen activity, String name, ThemeState.Selection theme, byte[] image) {
+        if (!ThemeRuntime.select(activity, theme, image)) {
             new SpotifySheet(activity, "Colors not applied",
                     "Spotify could not load the new colors, so the theme is unchanged.")
                     .primary("OK", () -> true).show();
@@ -365,7 +366,7 @@ final class ThemeSettings {
 
     /** Applies a theme chosen on this page, then lists it as the theme in use. */
     private static void save(SpicetifySettingsScreen activity, LinearLayout content, String name, ThemeState.Selection theme) {
-        if (!apply(activity, name, theme)) return;
+        if (!apply(activity, name, theme, null)) return;
         content.removeAllViews();
         build(activity, content);
     }

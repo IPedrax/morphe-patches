@@ -78,6 +78,7 @@ public class MarketplaceTest {
         assertEquals("https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/color.ini", theme.schemesUrl);
         assertEquals("https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/preview_playlist.png", theme.previewUrl);
         assertEquals(612, theme.stars);
+        assertNull(theme.backgroundUrl); // only the pinned Galaxy V2 has one
 
         List<Marketplace.Theme> many = Marketplace.parseManifest("["
                 + "{\"name\":\"A\",\"description\":\"a\",\"usercss\":\"a.css\",\"schemes\":\"https://example.com/a.ini\",\"branch\":\"dev\",\"preview\":null},"
@@ -90,6 +91,20 @@ public class MarketplaceTest {
         assertEquals("harbassan", many.get(0).author);
         assertEquals("https://raw.githubusercontent.com/harbassan/spicetify-galaxy/dev/themes/B/color.ini", many.get(1).schemesUrl);
         assertTrue(many.get(0).order < many.get(1).order);
+    }
+
+    @Test
+    public void galaxyV2ComesFromHarbassansRepositoryWithItsImage() {
+        // Downloaded when the Marketplace shows or applies it; nothing of Galaxy is bundled.
+        String files = "https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/";
+        Marketplace.Theme galaxy = Marketplace.GALAXY_V2;
+        assertEquals("Galaxy V2", galaxy.title);
+        assertEquals("harbassan", galaxy.author);
+        assertEquals(files + "color.ini", galaxy.schemesUrl);
+        assertEquals(files + "preview_playlist.png", galaxy.previewUrl);
+        assertEquals(files + "assets/default_bg.jpg", galaxy.backgroundUrl);
+        assertEquals("https://github.com/harbassan/spicetify-galaxy", galaxy.repoUrl);
+        assertEquals(Collections.singletonList("harbassan"), galaxy.keywords);
     }
 
     @Test
@@ -139,11 +154,11 @@ public class MarketplaceTest {
 
     @Test
     public void sortsByMostStarsThenGitHubAndManifestOrder() {
-        Marketplace.Theme first = new Marketplace.Theme("a", "d", "o", null, "s", "r", 9, 0, Collections.emptyList());
-        Marketplace.Theme second = new Marketplace.Theme("b", "d", "o", null, "s", "r", 9, 1, Collections.emptyList());
-        Marketplace.Theme third = new Marketplace.Theme("c", "d", "o", null, "s", "r", 5, 1000, Collections.emptyList());
+        Marketplace.Theme first = new Marketplace.Theme("a", "d", "o", null, "s", "r", 9, 0, Collections.emptyList(), null);
+        Marketplace.Theme second = new Marketplace.Theme("b", "d", "o", null, "s", "r", 9, 1, Collections.emptyList(), null);
+        Marketplace.Theme third = new Marketplace.Theme("c", "d", "o", null, "s", "r", 5, 1000, Collections.emptyList(), null);
         // Stars changed between two search pages, so GitHub listed this one later with more stars.
-        Marketplace.Theme moved = new Marketplace.Theme("m", "d", "o", null, "s", "r", 12, 2000, Collections.emptyList());
+        Marketplace.Theme moved = new Marketplace.Theme("m", "d", "o", null, "s", "r", 12, 2000, Collections.emptyList(), null);
         assertEquals(Arrays.asList(moved, first, second, third),
                 Marketplace.sorted(Arrays.asList(third, first, moved, second)));
     }

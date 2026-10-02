@@ -123,6 +123,9 @@ and accent colors. **Spicetify Marketplace** lists the community themes the
 desktop Marketplace offers, most stars first, with previews and search. Tap one
 to download its `color.ini` and choose a color scheme; only its colors apply.
 The list is kept for six hours, and **Refresh** reloads it from GitHub.
+**Galaxy V2**, pinned at the top, also brings Galaxy's background image: the
+image shows behind Spotify's main screen, whose pages turn see-through over
+it, and **Appearance** offers **Blur background image** while it's in use.
 **Paste a Spicetify theme** takes a desktop theme's
 `color.ini`, or CSS with `--spice-*` colors, and lets you choose its color
 scheme and an accent key such as Catppuccin's `mauve`. Settings that Spotify
