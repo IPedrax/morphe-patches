@@ -86,9 +86,10 @@ are chosen at runtime, so the checker requires every color resource to match
 the stock APK. It also checks that each pinned Encore palette class remaps
 every stock theme constant it loads. It verifies color values and IDs, equivalent relocated XML
 selectors, the local builder hook, both final URL hooks, the preference-aware
-wrapper, the settings dialog host, unchanged permissions, and the APK
-signature. It also compares all four installed settings bridge classes with
-the exact bundle used for patching, including their code and class metadata.
+wrapper, the settings dialog host, no added manifest components apart from
+server files, unchanged permissions, and the APK signature. It also compares
+all four installed settings bridge classes with the exact bundle used for
+patching, including their code and class metadata.
 This catches missing or replaced menu code that still has valid references.
 Verify the bundle's release checksum and provenance separately; matching an
 untrusted bundle does not establish that its code is correct.
@@ -96,7 +97,11 @@ It does not execute Spotify or cover every resource configuration.
 
 For builds with optional features, add `--home-pins` and/or
 `--server-files` to match the selected patches. The checker validates their
-capability flags and the server provider's private manifest declaration.
+capability flags and the private manifest declarations of the server provider
+and browser. Other patches must not add manifest components: a root mount
+install keeps Spotify's stock manifest and never registers them, so server
+files are unavailable there. `python3 scripts/test-verify-artifact.py` checks
+this rule without an APK.
 Add `--hide-premium-tab` for the navigation patch. Its checker verifies the
 original flag consumer, argument and result register, following conditional
 branch, installed capability, and compiled helper logic that preserves the
