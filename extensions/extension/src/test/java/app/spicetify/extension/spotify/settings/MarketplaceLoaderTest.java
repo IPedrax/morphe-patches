@@ -426,6 +426,34 @@ public class MarketplaceLoaderTest {
     }
 
     @Test
+    public void aRefreshThatComesUpShort_withoutACache_sendsNoShorterList_andSaysItFailed() {
+        // The first list wasn't cached, because its blacklist failed.
+        responses.put(Marketplace.BLACKLIST_URL, "FAIL");
+        responses.put(Marketplace.SEARCH_URL + "1", searchJson(2, Arrays.asList(ONE)));
+        responses.put(Marketplace.SEARCH_URL + "2", searchJson(2, Arrays.asList(THREE)));
+        responses.put(Marketplace.manifestUrl(ONE), themeJson("One"));
+        responses.put(Marketplace.manifestUrl(THREE), themeJson("Three"));
+        Recorder first = new Recorder();
+        loader().load(false, first);
+        assertEquals("done [One, Three]", first.calls.get(first.calls.size() - 1));
+        assertFalse(cacheFile.exists());
+
+        // A refresh whose second search page is rate limited: the partial lists, which a page that shows a
+        // list holds back, then the error, and no shorter list in that list's place.
+        responses.put(Marketplace.BLACKLIST_URL, BLACKLIST);
+        responses.put(Marketplace.SEARCH_URL + "2", "RATE");
+        Recorder listener = new Recorder();
+        loader().load(true, listener);
+        assertEquals(Arrays.asList("update [One]", "error " + MarketplaceLoader.RATE_LIMITED), listener.calls);
+
+        responses.put(Marketplace.SEARCH_URL + "2", "FAIL");
+        listener = new Recorder();
+        loader().load(true, listener);
+        assertEquals(Arrays.asList("update [One]", "error " + MarketplaceLoader.REFRESH_FAILED), listener.calls);
+        assertFalse(cacheFile.exists());
+    }
+
+    @Test
     public void everyManifestFailing_withoutACache_saysWhy() {
         responses.put(Marketplace.SEARCH_URL + "1", searchJson(2, Arrays.asList(ONE, THREE)));
         responses.put(Marketplace.manifestUrl(ONE), "RATE");
@@ -587,14 +615,20 @@ public class MarketplaceLoaderTest {
         responses.put(Marketplace.SEARCH_URL + "1", searchJson(2, Arrays.asList(ONE, THREE)));
         responses.put(Marketplace.manifestUrl(ONE), themeJson("One"));
         responses.put(Marketplace.manifestUrl(THREE), themeJson("Three"));
+        CountDownLatch lateStarted = new CountDownLatch(1);
         CountDownLatch lateManifest = new CountDownLatch(1);
         CountDownLatch checking = new CountDownLatch(1);
         CountDownLatch checkMayEnd = new CountDownLatch(1);
         CountDownLatch finished = new CountDownLatch(3);
+        Thread[] late = new Thread[1];
         Marketplace.Fetcher fetcher = fetcher();
         Marketplace.Fetcher slow = url -> {
             try {
-                if (url.equals(Marketplace.manifestUrl(THREE))) lateManifest.await();
+                if (url.equals(Marketplace.manifestUrl(THREE))) {
+                    late[0] = Thread.currentThread();
+                    lateStarted.countDown();
+                    lateManifest.await();
+                }
                 if (url.equals(Marketplace.resolve("c.ini", ONE, "main"))) {
                     checking.countDown();
                     checkMayEnd.await();
@@ -613,10 +647,11 @@ public class MarketplaceLoaderTest {
                 .load(false, listener));
         load.start();
 
-        // THREE's manifest misses its deadline and arrives while One is being checked.
+        // THREE's manifest misses its deadline and is done while One is still being checked.
+        assertTrue(lateStarted.await(5, TimeUnit.SECONDS)); // it began before its deadline
         assertTrue(checking.await(5, TimeUnit.SECONDS));
         lateManifest.countDown();
-        Thread.sleep(100);
+        late[0].join(5000);
         checkMayEnd.countDown();
         load.join(5000);
         assertTrue(finished.await(5, TimeUnit.SECONDS));

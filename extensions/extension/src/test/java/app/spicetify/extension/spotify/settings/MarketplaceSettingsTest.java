@@ -344,6 +344,170 @@ public class MarketplaceSettingsTest {
         }
     }
 
+    @Test public void aPageOpenedDuringARefreshShowsTheListAtOnce() {
+        putTwoThemes();
+        List<Runnable> loads = new ArrayList<>();
+        try (var controller = appearance()) {
+            View appearance = decor();
+            Dialog first = open(appearance); // lists and caches Aurora and Borealis
+            MarketplaceSettings.loads = loads::add;
+            button(first.getWindow().getDecorView(), "Refresh").performClick();
+            Dialog[] second = new Dialog[1];
+            List<String> secondAtOnce = new ArrayList<>();
+            List<String> secondTexts = new ArrayList<>();
+            onRequest.put(Marketplace.SEARCH_URL + "1", () -> {
+                idle();
+                first.onBackPressed(); // closed while its refresh runs
+                idle();
+                second[0] = open(appearance);
+                View screen = second[0].getWindow().getDecorView();
+                secondAtOnce.addAll(titles(first(screen, ListView.class).getAdapter()));
+                secondTexts.addAll(visibleTexts(screen));
+            });
+
+            loads.remove(0).run();
+            idle();
+
+            assertTrue(loads.isEmpty()); // the second page took over the refresh
+            assertEquals(Arrays.asList("Aurora", "Borealis"), secondAtOnce);
+            assertTrue(secondTexts.contains("Loading themes…"));
+            View screen = second[0].getWindow().getDecorView();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(first(screen, ListView.class).getAdapter()));
+            assertFalse(visibleTexts(screen).contains("Loading themes…"));
+        }
+    }
+
+    @Test public void rotatingDuringARefreshKeepsTheList() {
+        putTwoThemes();
+        List<Runnable> loads = new ArrayList<>();
+        try (var controller = appearance()) {
+            Dialog first = open(decor());
+            MarketplaceSettings.loads = loads::add;
+            button(first.getWindow().getDecorView(), "Refresh").performClick();
+            controller.recreate();
+            idle();
+            View screen = ShadowDialog.getLatestDialog().getWindow().getDecorView();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(first(screen, ListView.class).getAdapter()));
+            assertTrue(visibleTexts(screen).contains("Loading themes…"));
+            assertEquals(1, loads.size()); // the new page took over the refresh
+
+            loads.remove(0).run();
+            idle();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(first(screen, ListView.class).getAdapter()));
+            assertFalse(visibleTexts(screen).contains("Loading themes…"));
+        }
+    }
+
+    @Test public void aPageOpenedDuringAColdLoadShowsItsListSoFar() {
+        putTwoThemes(); // no cache, so the load lists themes as they arrive
+        List<Runnable> loads = new ArrayList<>();
+        MarketplaceSettings.loads = loads::add;
+        try (var controller = appearance()) {
+            View appearance = decor();
+            Dialog first = open(appearance);
+            Dialog[] second = new Dialog[1];
+            List<String> secondAtOnce = new ArrayList<>();
+            onRequest.put(Marketplace.manifestUrl(REPO_B), () -> {
+                idle();
+                first.onBackPressed();
+                idle();
+                second[0] = open(appearance);
+                secondAtOnce.addAll(titles(first(second[0].getWindow().getDecorView(), ListView.class).getAdapter()));
+            });
+
+            loads.remove(0).run();
+            idle();
+
+            assertTrue(loads.isEmpty());
+            assertEquals(Collections.singletonList("Aurora"), secondAtOnce);
+            View screen = second[0].getWindow().getDecorView();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(first(screen, ListView.class).getAdapter()));
+            assertFalse(visibleTexts(screen).contains("Loading themes…"));
+        }
+    }
+
+    @Test public void rotatingDuringAColdLoadShowsItsListSoFar() {
+        putTwoThemes();
+        List<Runnable> loads = new ArrayList<>();
+        MarketplaceSettings.loads = loads::add;
+        try (var controller = appearance()) {
+            open(decor());
+            List<String> afterRotation = new ArrayList<>();
+            List<String> textsAfterRotation = new ArrayList<>();
+            onRequest.put(Marketplace.manifestUrl(REPO_B), () -> {
+                idle();
+                controller.recreate();
+                idle();
+                View screen = ShadowDialog.getLatestDialog().getWindow().getDecorView();
+                afterRotation.addAll(titles(first(screen, ListView.class).getAdapter()));
+                textsAfterRotation.addAll(visibleTexts(screen));
+            });
+
+            loads.remove(0).run();
+            idle();
+
+            assertTrue(loads.isEmpty()); // the new page took over the load
+            assertEquals(Collections.singletonList("Aurora"), afterRotation);
+            assertTrue(textsAfterRotation.contains("Loading themes…"));
+            View screen = ShadowDialog.getLatestDialog().getWindow().getDecorView();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(first(screen, ListView.class).getAdapter()));
+        }
+    }
+
+    @Test public void aFailedRefreshWithoutACacheFileKeepsTheListAndSaysSo() {
+        // Two search pages, and a blacklist that fails, so the first list isn't cached.
+        responses.put(Marketplace.BLACKLIST_URL, "FAIL");
+        responses.put(Marketplace.SEARCH_URL + "1", search(2, REPO_A));
+        responses.put(Marketplace.SEARCH_URL + "2", search(2, REPO_B));
+        responses.put(Marketplace.manifestUrl(REPO_A), themeJson("Aurora", "A vivid theme"));
+        responses.put(Marketplace.manifestUrl(REPO_B), themeJson("Borealis", "A cool theme"));
+        responses.put(colorIni(REPO_A), ONE_SCHEME);
+        responses.put(colorIni(REPO_B), ONE_SCHEME);
+        try (var controller = appearance()) {
+            View screen = open(decor()).getWindow().getDecorView();
+            ListView list = first(screen, ListView.class);
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(list.getAdapter()));
+
+            // The refresh reads the blacklist, and GitHub rate limits its second search page.
+            responses.put(Marketplace.BLACKLIST_URL, "{\"repos\":[]}");
+            responses.put(Marketplace.SEARCH_URL + "2", "RATE");
+            button(screen, "Refresh").performClick();
+            idle();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(list.getAdapter()));
+            List<String> texts = visibleTexts(screen);
+            assertTrue(texts.contains(MarketplaceLoader.RATE_LIMITED));
+            assertTrue(texts.contains("Retry"));
+
+            responses.put(Marketplace.SEARCH_URL + "2", "FAIL");
+            button(screen, "Retry").performClick();
+            idle();
+            assertEquals(Arrays.asList("Aurora", "Borealis"), titles(list.getAdapter()));
+            assertTrue(visibleTexts(screen).contains(MarketplaceLoader.REFRESH_FAILED));
+        }
+    }
+
+    @Test public void aRetryThatComesUpShortAfterAFailedLoadShowsWhatArrivedAndWhy() {
+        responses.put(Marketplace.SEARCH_URL + "1", "RATE");
+        try (var controller = appearance()) {
+            View screen = open(decor()).getWindow().getDecorView();
+            ListView list = first(screen, ListView.class);
+            assertTrue(visibleTexts(screen).contains(MarketplaceLoader.RATE_LIMITED));
+            assertEquals(Collections.emptyList(), titles(list.getAdapter()));
+
+            // Retry gets the first search page, and GitHub rate limits the second.
+            responses.put(Marketplace.SEARCH_URL + "1", search(2, REPO_A));
+            responses.put(Marketplace.SEARCH_URL + "2", "RATE");
+            responses.put(Marketplace.manifestUrl(REPO_A), themeJson("Aurora", "A vivid theme"));
+            responses.put(colorIni(REPO_A), ONE_SCHEME);
+            button(screen, "Retry").performClick();
+            idle();
+            assertEquals(Collections.singletonList("Aurora"), titles(list.getAdapter()));
+            List<String> texts = visibleTexts(screen);
+            assertTrue(texts.contains(MarketplaceLoader.RATE_LIMITED));
+            assertTrue(texts.contains("Retry"));
+        }
+    }
+
     @Test public void aPageClosedDuringItsLoadHearsNothingMoreFromIt() throws IOException {
         putTwoThemes();
         writeCache("spicetify_marketplace_themes.json", System.currentTimeMillis() - 7 * 60 * 60 * 1000L, "Old theme");
@@ -687,6 +851,11 @@ public class MarketplaceSettingsTest {
     }
 
     private static String search(Marketplace.Repo... repos) {
+        return search(repos.length, repos);
+    }
+
+    /** One search page, out of {@code total} results. */
+    private static String search(int total, Marketplace.Repo... repos) {
         StringBuilder items = new StringBuilder();
         for (Marketplace.Repo repo : repos) {
             if (items.length() > 0) items.append(',');
@@ -694,7 +863,7 @@ public class MarketplaceSettingsTest {
                     .append("\",\"default_branch\":\"main\",\"html_url\":\"").append(repo.url)
                     .append("\",\"stargazers_count\":").append(repo.stars).append('}');
         }
-        return "{\"total_count\":" + repos.length + ",\"items\":[" + items + "]}";
+        return "{\"total_count\":" + total + ",\"items\":[" + items + "]}";
     }
 
     private static String themeJson(String name, String description) {

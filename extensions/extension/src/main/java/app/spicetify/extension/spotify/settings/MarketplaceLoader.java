@@ -83,7 +83,7 @@ final class MarketplaceLoader {
                 listener.onThemes(cached.themes, fresh);
                 if (fresh) return;
             }
-            new Run(listener, cached).load();
+            new Run(listener, cached, refresh).load();
         } catch (Throwable e) {
             Log.w(TAG, "Marketplace load failed", e);
             listener.onError("Couldn't load the Marketplace: " + describe(e));
@@ -104,17 +104,24 @@ final class MarketplaceLoader {
         private final Listener listener;
         /** The cached list: shown in place of a list that fails to load, and kept on screen until this one is done. */
         private final Marketplace.Cached cached;
+        /** A refresh or a Retry: one that comes up short is a failed refresh, so a list on screen stays. */
+        private final boolean refresh;
+        /** The themes the manifests list, until the checks take their copy. */
         private final List<Marketplace.Theme> themes = Collections.synchronizedList(new ArrayList<>());
+        /**
+         * The checks' copy of the list, taken when the manifests' time is up, which they drop themes
+         * from. A manifest that answers later only reaches the first list, which nothing shows by then.
+         */
+        private volatile List<Marketplace.Theme> listed;
         /** The first failure that may have left the list short or unchecked, so it isn't cached. */
         private final AtomicReference<Exception> failure = new AtomicReference<>();
-        /** Cleared when the manifests' time is up, so a late one lists no theme that won't be checked. */
-        private volatile boolean listing = true;
         /** Set with the last call: nothing reports after it. */
         private final AtomicBoolean finished = new AtomicBoolean();
 
-        Run(Listener listener, Marketplace.Cached cached) {
+        Run(Listener listener, Marketplace.Cached cached, boolean refresh) {
             this.listener = listener;
             this.cached = cached;
+            this.refresh = refresh;
         }
 
         void load() throws InterruptedException {
@@ -151,14 +158,11 @@ final class MarketplaceLoader {
             for (CountDownLatch latch : manifests) {
                 answered &= latch.await(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             }
-            List<Marketplace.Theme> listed;
-            synchronized (themes) {
-                listing = false;
-                listed = Marketplace.sorted(themes);
-            }
+            List<Marketplace.Theme> sorted = Marketplace.sorted(themes);
+            listed = Collections.synchronizedList(new ArrayList<>(sorted));
             // Then each listed theme's color.ini, the top ones first, with a deadline of their own.
             List<Runnable> checks = new ArrayList<>();
-            for (Marketplace.Theme theme : listed) checks.add(() -> check(theme));
+            for (Marketplace.Theme theme : sorted) checks.add(() -> check(theme));
             boolean checked = run(checks).await(checksTimeoutMillis, TimeUnit.MILLISECONDS);
             finish(answered && checked);
         }
@@ -201,14 +205,12 @@ final class MarketplaceLoader {
          * list short.
          */
         private void list(Marketplace.Repo repo, int index) {
-            if (!listing) return; // The manifests' time is up; don't download for nothing.
+            if (listed != null) return; // The manifests' time is up; don't download for nothing.
             try {
                 List<Marketplace.Theme> found = Marketplace.parseManifest(fetcher.get(Marketplace.manifestUrl(repo)), repo, index);
-                synchronized (themes) {
-                    if (!listing || found.isEmpty()) return;
-                    themes.addAll(found);
-                }
-                update();
+                if (found.isEmpty()) return;
+                themes.addAll(found);
+                if (listed == null) update(); // Once the checks have their copy, there's nothing new to show.
             } catch (FileNotFoundException | Marketplace.TooLargeException | JSONException ignored) {
                 // No manifest at that URL, one over the size cap, or not one Marketplace can use.
             } catch (IOException e) {
@@ -235,7 +237,7 @@ final class MarketplaceLoader {
                 Log.w(TAG, "Marketplace color.ini failed: " + theme.schemesUrl, e);
                 return;
             }
-            themes.remove(theme);
+            listed.remove(theme);
             update();
         }
 
@@ -247,8 +249,9 @@ final class MarketplaceLoader {
             if (cached != null) return;
             synchronized (finished) {
                 if (finished.get()) return; // The last call already went out; don't follow it.
+                List<Marketplace.Theme> checking = listed;
                 try {
-                    listener.onThemes(Marketplace.sorted(themes), false);
+                    listener.onThemes(Marketplace.sorted(checking != null ? checking : themes), false);
                 } catch (RuntimeException e) {
                     Log.w(TAG, "Marketplace listener failed", e);
                 }
@@ -257,21 +260,23 @@ final class MarketplaceLoader {
 
         /**
          * Reports the list, and caches it when every manifest answered and every theme was checked.
-         * A list that may be short or unchecked gives way to the cached one, with why; without a
-         * cache, it's shown as it is, or, when nothing arrived, the page says why.
+         * A list that may be short or unchecked is a failed refresh: the list shown before stays, the
+         * cached one when there is one, with why. A first load without a cache shows what arrived, or,
+         * when nothing did, says why.
          */
         private void finish(boolean answered) {
             Exception why = failure.get();
             boolean complete = answered && why == null;
-            List<Marketplace.Theme> list = Marketplace.sorted(themes);
-            if (complete && !list.isEmpty()) writeCache(list);
             String rateLimited = why instanceof Marketplace.RateLimitException ? RATE_LIMITED : null;
             synchronized (finished) {
                 finished.set(true);
-                if (complete || (cached == null && !list.isEmpty())) {
+                // Taken after the last call is claimed, so a late check can't drop a theme from it.
+                List<Marketplace.Theme> list = Marketplace.sorted(listed);
+                if (complete && !list.isEmpty()) writeCache(list);
+                if (complete || (!refresh && cached == null && !list.isEmpty())) {
                     listener.onThemes(list, true);
-                } else if (cached != null) {
-                    listener.onThemes(cached.themes, false);
+                } else if (cached != null || (refresh && !list.isEmpty())) {
+                    if (cached != null) listener.onThemes(cached.themes, false);
                     listener.onError(rateLimited != null ? rateLimited : REFRESH_FAILED);
                 } else {
                     listener.onError(rateLimited != null ? rateLimited : "Couldn't load the Marketplace: "

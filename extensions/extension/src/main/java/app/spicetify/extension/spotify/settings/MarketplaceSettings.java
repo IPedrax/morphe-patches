@@ -175,6 +175,8 @@ final class MarketplaceSettings extends LinearLayout {
         }
         Load load = new Load();
         load.page = this;
+        // A page that takes over this refresh keeps showing this list until the refresh is done.
+        if (keepList) load.last = themes;
         running = load;
         // Through a local, so the task holds the loader and not this page.
         MarketplaceLoader loader = this.loader;
