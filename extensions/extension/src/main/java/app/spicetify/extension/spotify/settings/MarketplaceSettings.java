@@ -2,6 +2,7 @@ package app.spicetify.extension.spotify.settings;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -11,6 +12,7 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -28,6 +30,7 @@ import app.spicetify.extension.spotify.theme.ThemeException;
 import app.spicetify.extension.spotify.theme.ThemeState;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,9 +42,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The Spicetify Marketplace page: Galaxy V2, then the community themes the desktop Marketplace lists,
- * with their previews and a search. A tapped theme's color.ini downloads, with Galaxy V2's background
- * image, and its color scheme, chosen in a sheet when there's more than one, applies like a theme on
- * Appearance.
+ * with their previews and a search. A tapped theme's color.ini downloads, with the background image
+ * it shows on desktop, if any, and its color scheme, chosen in a sheet when there's more than one,
+ * applies like a theme on Appearance.
  */
 // Built in code by its page host, with English text like every Spicetify page.
 @SuppressLint({"ViewConstructor", "SetTextI18n"})
@@ -59,6 +62,11 @@ final class MarketplaceSettings extends LinearLayout {
     /** The load in flight, which a page opened while it runs takes over; main thread only. */
     static Load running;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    /**
+     * A theme's own image smaller than this on either side is a texture tile, like Spotify Dark's
+     * 70x70 ones, not a background; the real ones start at Galaxy's 1200x675.
+     */
+    private static final int MIN_BACKGROUND_PX = 480;
 
     private final SpicetifySettingsScreen screen;
     private final MarketplaceLoader loader;
@@ -236,25 +244,27 @@ final class MarketplaceSettings extends LinearLayout {
     }
 
     /**
-     * Reads a theme's color.ini on the download thread, then the background image it comes with, if
-     * any, and returns what to show for it: its schemes Spotify can use, or why there are none. Never
-     * throws.
+     * Reads a theme's color.ini on the download thread, then the background image it comes with or
+     * shows on desktop, if any, and returns what to show for it: its schemes Spotify can use, or why
+     * they can't apply. Never throws. An image that fails to download or decode stops the theme from
+     * applying, as a color.ini that fails does.
      */
     private Runnable download(Marketplace.Theme theme) {
         try {
             Map<String, ThemeState.Selection> schemes = Marketplace.schemes(theme.title, fetcher.get(theme.schemesUrl));
             if (schemes.isEmpty()) return () -> problem(theme.title + " has no colors Spotify can use.");
-            byte[] image = null;
-            if (theme.backgroundUrl != null) {
-                // Galaxy V2's image is the point of it, so without it nothing applies.
-                try {
-                    // At about screen size, here, off the main thread, so Spotify's start only reads that.
-                    image = ThemeBackground.fit(screen, backgrounds.get(theme.backgroundUrl));
-                } catch (Exception | OutOfMemoryError e) {
-                    Log.w("Spicetify", "Marketplace background image failed: " + theme.backgroundUrl, e);
-                    String reason = imageProblem(e);
-                    return () -> problem("Couldn't load " + theme.title + "'s background image: " + reason);
-                }
+            byte[] image;
+            try {
+                // Galaxy V2's image is the point of it; another theme's is the one it shows on desktop, if any.
+                byte[] found = theme.backgroundUrl != null ? backgrounds.get(theme.backgroundUrl) : ownImage(theme);
+                // At about screen size, here, off the main thread, so Spotify's start only reads that.
+                image = found == null ? null : ThemeBackground.fit(screen, found);
+            } catch (Exception | OutOfMemoryError e) {
+                // Exception: Base64 throws IllegalArgumentException for a data URI that isn't one. Nothing
+                // applies, so the theme in use and its image stay.
+                Log.w("Spicetify", "Marketplace background image failed for " + theme.title, e);
+                String reason = imageProblem(e);
+                return () -> problem("Couldn't load " + theme.title + "'s background image: " + reason);
             }
             byte[] background = image;
             return () -> choose(theme, schemes, background);
@@ -274,6 +284,49 @@ final class MarketplaceSettings extends LinearLayout {
         if (e instanceof Marketplace.RateLimitException) return MarketplaceLoader.RATE_LIMITED;
         if (e instanceof OutOfMemoryError) return "It's too large to load.";
         return MarketplaceLoader.describe(e);
+    }
+
+    /**
+     * The image a theme shows on desktop: the first its include scripts name, in manifest order, then
+     * its user.css's. Null when none does, when a file isn't there (a 404), or when the image is a
+     * texture tile rather than a background. Any other failure, such as a timeout, GitHub's rate limit
+     * or bytes Android can't read, throws.
+     */
+    private static byte[] ownImage(Marketplace.Theme theme) throws IOException {
+        String url = null;
+        for (int i = 0; url == null && i < theme.includeUrls.size(); i++) {
+            String js = text(theme.includeUrls.get(i));
+            if (js != null) url = ThemeImages.fromJs(js);
+        }
+        if (url == null && theme.usercssUrl != null) {
+            String css = text(theme.usercssUrl);
+            if (css != null) url = ThemeImages.fromCss(css, theme.usercssUrl);
+        }
+        if (url == null) return null;
+        byte[] image;
+        if (url.startsWith("data:")) {
+            image = Base64.decode(url.substring(url.indexOf(',') + 1), Base64.DEFAULT);
+        } else {
+            try {
+                image = backgrounds.get(url);
+            } catch (FileNotFoundException gone) {
+                return null;
+            }
+        }
+        BitmapFactory.Options bounds = ThemeBackground.bounds(image);
+        if (bounds.outWidth >= MIN_BACKGROUND_PX && bounds.outHeight >= MIN_BACKGROUND_PX) return image;
+        Log.i("Spicetify", theme.title + "'s " + bounds.outWidth + "x" + bounds.outHeight
+                + " image is a texture tile, not a background");
+        return null;
+    }
+
+    /** A script or stylesheet to look for an image in; null when it isn't there. Other failures throw. */
+    private static String text(String url) throws IOException {
+        try {
+            return fetcher.get(url);
+        } catch (FileNotFoundException gone) {
+            return null;
+        }
     }
 
     /**

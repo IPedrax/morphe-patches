@@ -94,6 +94,39 @@ public class MarketplaceTest {
     }
 
     @Test
+    public void resolvesTheUserCssAndIncludesLikeTheSchemes() throws Exception {
+        // include may be one path or an array of them; entries that aren't strings are skipped.
+        List<Marketplace.Theme> themes = Marketplace.parseManifest("["
+                + "{\"name\":\"Galaxy\",\"description\":\"d\",\"usercss\":\"user.css\",\"schemes\":\"color.ini\",\"include\":"
+                + "[\"https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/theme.js\",3,null,\"extra.js\"]},"
+                + "{\"name\":\"Hazy\",\"description\":\"d\",\"usercss\":\"https://cdn.jsdelivr.net/gh/astromations/hazy/app.css\","
+                + "\"schemes\":\"color.ini\",\"branch\":\"dev\",\"include\":\"hazy.js\"},"
+                + "{\"name\":\"Plain\",\"description\":\"d\",\"usercss\":\"user.css\",\"schemes\":\"color.ini\"},"
+                + "{\"name\":\"Many\",\"description\":\"d\",\"usercss\":\"user.css\",\"schemes\":\"color.ini\","
+                + "\"include\":[\"1.js\",\"2.js\",\"3.js\",\"4.js\",\"5.js\",\"6.js\"]}]", GALAXY, 0);
+        assertEquals("https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/user.css", themes.get(0).usercssUrl);
+        assertEquals(Arrays.asList("https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/theme.js",
+                "https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/extra.js"), themes.get(0).includeUrls);
+        assertEquals("https://cdn.jsdelivr.net/gh/astromations/hazy/app.css", themes.get(1).usercssUrl);
+        assertEquals(Collections.singletonList("https://raw.githubusercontent.com/harbassan/spicetify-galaxy/dev/hazy.js"),
+                themes.get(1).includeUrls);
+        assertTrue(themes.get(2).includeUrls.isEmpty());
+        // A tap reads them one by one, so only the first five count.
+        assertEquals(5, themes.get(3).includeUrls.size());
+    }
+
+    @Test
+    public void aCacheWrittenBeforeUserCssAndIncludesWereKeptStillLoads() throws Exception {
+        Marketplace.Theme theme = Marketplace.fromJson("{\"savedAt\":1,\"themes\":[{\"title\":\"Galaxy\",\"description\":\"d\","
+                + "\"author\":\"harbassan\",\"preview\":null,\"schemes\":\"https://example.com/c.ini\","
+                + "\"repo\":\"https://github.com/harbassan/spicetify-galaxy\",\"stars\":612,\"order\":0,\"keywords\":[]}]}")
+                .themes.get(0);
+        assertEquals("Galaxy", theme.title);
+        assertNull(theme.usercssUrl); // so it has no image to find until the list loads again
+        assertTrue(theme.includeUrls.isEmpty());
+    }
+
+    @Test
     public void galaxyV2ComesFromHarbassansRepositoryWithItsImage() {
         // Downloaded when the Marketplace shows or applies it; nothing of Galaxy is bundled.
         String files = "https://raw.githubusercontent.com/harbassan/spicetify-galaxy/main/";
@@ -105,6 +138,9 @@ public class MarketplaceTest {
         assertEquals(files + "assets/default_bg.jpg", galaxy.backgroundUrl);
         assertEquals("https://github.com/harbassan/spicetify-galaxy", galaxy.repoUrl);
         assertEquals(Collections.singletonList("harbassan"), galaxy.keywords);
+        // Its image is known, so nothing is searched for one.
+        assertNull(galaxy.usercssUrl);
+        assertTrue(galaxy.includeUrls.isEmpty());
     }
 
     @Test
@@ -154,11 +190,11 @@ public class MarketplaceTest {
 
     @Test
     public void sortsByMostStarsThenGitHubAndManifestOrder() {
-        Marketplace.Theme first = new Marketplace.Theme("a", "d", "o", null, "s", "r", 9, 0, Collections.emptyList(), null);
-        Marketplace.Theme second = new Marketplace.Theme("b", "d", "o", null, "s", "r", 9, 1, Collections.emptyList(), null);
-        Marketplace.Theme third = new Marketplace.Theme("c", "d", "o", null, "s", "r", 5, 1000, Collections.emptyList(), null);
+        Marketplace.Theme first = new Marketplace.Theme("a", "d", "o", null, "s", "r", 9, 0, Collections.emptyList(), null, "u", Collections.emptyList());
+        Marketplace.Theme second = new Marketplace.Theme("b", "d", "o", null, "s", "r", 9, 1, Collections.emptyList(), null, "u", Collections.emptyList());
+        Marketplace.Theme third = new Marketplace.Theme("c", "d", "o", null, "s", "r", 5, 1000, Collections.emptyList(), null, "u", Collections.emptyList());
         // Stars changed between two search pages, so GitHub listed this one later with more stars.
-        Marketplace.Theme moved = new Marketplace.Theme("m", "d", "o", null, "s", "r", 12, 2000, Collections.emptyList(), null);
+        Marketplace.Theme moved = new Marketplace.Theme("m", "d", "o", null, "s", "r", 12, 2000, Collections.emptyList(), null, "u", Collections.emptyList());
         assertEquals(Arrays.asList(moved, first, second, third),
                 Marketplace.sorted(Arrays.asList(third, first, moved, second)));
     }
@@ -260,7 +296,7 @@ public class MarketplaceTest {
     @Test
     public void roundTripsTheCache() throws Exception {
         List<Marketplace.Theme> themes = Marketplace.parseManifest("{\"name\":\"Galaxy\",\"description\":\"d\","
-                + "\"usercss\":\"u.css\",\"schemes\":\"c.ini\"}", GALAXY, 2);
+                + "\"usercss\":\"u.css\",\"schemes\":\"c.ini\",\"include\":\"theme.js\"}", GALAXY, 2);
         Marketplace.Cached cached = Marketplace.fromJson(Marketplace.toJson(themes, 1234L));
         assertEquals(1234L, cached.savedAt);
         Marketplace.Theme theme = cached.themes.get(0);
@@ -268,6 +304,8 @@ public class MarketplaceTest {
         assertEquals(themes.get(0).schemesUrl, theme.schemesUrl);
         assertNull(theme.previewUrl);
         assertEquals(themes.get(0).order, theme.order);
+        assertEquals(themes.get(0).usercssUrl, theme.usercssUrl);
+        assertEquals(themes.get(0).includeUrls, theme.includeUrls);
     }
 
     private static String repeat(char c, int count) {

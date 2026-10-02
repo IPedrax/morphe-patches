@@ -43,6 +43,8 @@ final class Marketplace {
     private static final int MAX_ITEMS = 50;
     private static final int MAX_NAME_CHARS = 100;
     private static final int MAX_DESCRIPTION_CHARS = 300;
+    /** A tap reads a theme's scripts one by one, looking for an image, so only the first few count. */
+    private static final int MAX_INCLUDES = 5;
 
     interface Fetcher {
         String get(String url) throws IOException;
@@ -162,11 +164,19 @@ final class Marketplace {
         final int order;
         /** What search matches besides the title: the repository's owner, every author and the tags. */
         final List<String> keywords;
-        /** An image to draw behind Spotify with the theme; null for every GitHub result. */
+        /**
+         * An image to draw behind Spotify with the theme; null for every GitHub result, whose own image,
+         * if any, is found in its scripts or user.css when it's applied.
+         */
         final String backgroundUrl;
+        /** The theme's user.css, which may name its own image; null for Galaxy V2 and for a theme from an older cache. */
+        final String usercssUrl;
+        /** The scripts the theme includes, in manifest order, which may name its image too. */
+        final List<String> includeUrls;
 
         Theme(String title, String description, String author, String previewUrl, String schemesUrl,
-                String repoUrl, int stars, int order, List<String> keywords, String backgroundUrl) {
+                String repoUrl, int stars, int order, List<String> keywords, String backgroundUrl,
+                String usercssUrl, List<String> includeUrls) {
             this.title = title;
             this.description = description;
             this.author = author;
@@ -177,6 +187,8 @@ final class Marketplace {
             this.order = order;
             this.keywords = keywords;
             this.backgroundUrl = backgroundUrl;
+            this.usercssUrl = usercssUrl;
+            this.includeUrls = includeUrls;
         }
     }
 
@@ -188,7 +200,7 @@ final class Marketplace {
     static final Theme GALAXY_V2 = new Theme("Galaxy V2",
             "Galaxy's colors over its fullscreen background image, the way the desktop theme shows it.", "harbassan",
             GALAXY_FILES + "preview_playlist.png", GALAXY_FILES + "color.ini", "https://github.com/harbassan/spicetify-galaxy",
-            -1, -1, Collections.singletonList("harbassan"), GALAXY_FILES + "assets/default_bg.jpg");
+            -1, -1, Collections.singletonList("harbassan"), GALAXY_FILES + "assets/default_bg.jpg", null, Collections.emptyList());
 
     static final class Page {
         final List<Repo> repos;
@@ -310,15 +322,21 @@ final class Marketplace {
             if (item == null) continue;
             String title = string(item, "name");
             String description = string(item, "description");
+            String usercss = string(item, "usercss");
             String schemes = string(item, "schemes");
-            if (title.isEmpty() || description.isEmpty() || string(item, "usercss").isEmpty() || schemes.isEmpty()) continue;
+            if (title.isEmpty() || description.isEmpty() || usercss.isEmpty() || schemes.isEmpty()) continue;
             String branch = string(item, "branch");
             if (branch.isEmpty()) branch = repo.branch;
             String preview = string(item, "preview");
+            List<String> includes = new ArrayList<>();
+            for (String include : strings(item.opt("include"))) {
+                if (includes.size() < MAX_INCLUDES) includes.add(resolve(include, repo, branch));
+            }
             themes.add(new Theme(cap(title, MAX_NAME_CHARS), cap(description, MAX_DESCRIPTION_CHARS),
                     cap(author(item, repo), MAX_NAME_CHARS),
                     preview.isEmpty() ? null : resolve(preview, repo, branch), resolve(schemes, repo, branch),
-                    repo.url, repo.stars, repoIndex * 1000 + i, keywords(item, repo), null));
+                    repo.url, repo.stars, repoIndex * 1000 + i, keywords(item, repo), null,
+                    resolve(usercss, repo, branch), includes));
         }
         return themes;
     }
@@ -327,6 +345,18 @@ final class Marketplace {
     private static String string(JSONObject object, String key) {
         Object value = object.opt(key);
         return value instanceof String ? ((String) value).trim() : "";
+    }
+
+    /** A string, or the strings in an array, trimmed; empty ones and anything else are left out. */
+    private static List<String> strings(Object value) {
+        JSONArray array = value instanceof JSONArray ? (JSONArray) value : new JSONArray().put(value);
+        List<String> strings = new ArrayList<>();
+        for (int i = 0; i < array.length(); i++) {
+            Object entry = array.opt(i);
+            String string = entry instanceof String ? ((String) entry).trim() : "";
+            if (!string.isEmpty()) strings.add(string);
+        }
+        return strings;
     }
 
     /** Cuts to at most {@code maxChars}, one fewer when the cut would split a surrogate pair. */
@@ -394,11 +424,13 @@ final class Marketplace {
             array.put(new JSONObject().put("title", theme.title).put("description", theme.description)
                     .put("author", theme.author).put("preview", theme.previewUrl == null ? JSONObject.NULL : theme.previewUrl)
                     .put("schemes", theme.schemesUrl).put("repo", theme.repoUrl)
-                    .put("stars", theme.stars).put("order", theme.order).put("keywords", new JSONArray(theme.keywords)));
+                    .put("stars", theme.stars).put("order", theme.order).put("keywords", new JSONArray(theme.keywords))
+                    .put("usercss", theme.usercssUrl).put("include", new JSONArray(theme.includeUrls)));
         }
         return new JSONObject().put("savedAt", savedAt).put("themes", array).toString();
     }
 
+    /** A cache written before user.css and the scripts were kept still loads, with nothing to find an image in. */
     static Cached fromJson(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
         JSONArray array = root.getJSONArray("themes");
@@ -406,12 +438,14 @@ final class Marketplace {
         for (int i = 0; i < array.length(); i++) {
             JSONObject item = array.getJSONObject(i);
             String preview = string(item, "preview");
+            String usercss = string(item, "usercss");
             List<String> keywords = new ArrayList<>();
             JSONArray saved = item.getJSONArray("keywords");
             for (int k = 0; k < saved.length(); k++) keywords.add(saved.getString(k));
             themes.add(new Theme(item.getString("title"), item.getString("description"), item.getString("author"),
                     preview.isEmpty() ? null : preview, item.getString("schemes"), item.getString("repo"),
-                    item.getInt("stars"), item.getInt("order"), keywords, null));
+                    item.getInt("stars"), item.getInt("order"), keywords, null,
+                    usercss.isEmpty() ? null : usercss, strings(item.opt("include"))));
         }
         return new Cached(themes, root.getLong("savedAt"));
     }

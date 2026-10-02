@@ -88,8 +88,10 @@ fills the window, center-cropped and darkened, Spotify's page background turns
 see-through over it, and blurring it is an option that starts off. The
 Marketplace's Galaxy V2 entry downloads that repository's `color.ini`,
 `preview_playlist.png` and `assets/default_bg.jpg` from its `main` branch when
-it's shown or applied. That repository has no license, so nothing from it is
-copied or bundled: no code, CSS, or images.
+it's shown or applied. Galaxy's own Marketplace listing brings the same image:
+its `theme.js` names it as `defImage`, and both are downloaded when the theme
+is applied. That repository has no license, so nothing from it is copied or
+bundled: no code, CSS, or images.
 
 ## APK reverse engineering skill
 

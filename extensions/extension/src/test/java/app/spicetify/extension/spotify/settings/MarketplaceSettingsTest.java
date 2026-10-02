@@ -6,6 +6,7 @@ import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Looper;
+import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -88,8 +89,10 @@ public class MarketplaceSettingsTest {
     private final List<String> previewsDownloaded = new ArrayList<>();
     /** Work the fetcher does when it's asked for a URL, before it answers; each runs once. */
     private final Map<String, Runnable> onRequest = new HashMap<>();
-    /** Background images by URL; the image downloader fails for any other. */
+    /** Background images by URL; the image downloader fails with an HTTP 500 for any other. */
     private final Map<String, byte[]> images = new HashMap<>();
+    /** An image in {@link #images} that isn't there: a 404. */
+    private static final byte[] GONE = new byte[0];
 
     @Before public void initialize() {
         var application = RuntimeEnvironment.getApplication();
@@ -121,6 +124,7 @@ public class MarketplaceSettingsTest {
         MarketplaceSettings.backgrounds = url -> {
             requested.add(url);
             byte[] image = images.get(url);
+            if (image == GONE) throw new FileNotFoundException(url);
             if (image == null) throw new IOException("HTTP 500 for " + url);
             return image;
         };
@@ -937,6 +941,152 @@ public class MarketplaceSettingsTest {
         }
     }
 
+    @Test @Config(shadows = Patched.class) @GraphicsMode(GraphicsMode.Mode.NATIVE) // Android's own decoder, which reads an image's real size
+    public void aThemeBringsTheImageItsScriptNamesAndAThemeWithoutOneClearsIt() {
+        putTwoThemes();
+        responses.put(Marketplace.manifestUrl(REPO_A), "{\"name\":\"Aurora\",\"description\":\"A vivid theme\","
+                + "\"usercss\":\"u.css\",\"schemes\":\"color.ini\",\"include\":[\"missing.js\",\"hazy.js\"]}");
+        responses.put(Marketplace.resolve("hazy.js", REPO_A, "main"), "const defImage = \"https://i.imgur.com/Wl2D0h0.png\";");
+        responses.put(Marketplace.resolve("u.css", REPO_B, "main"), ".Root__main-view { background-color: transparent; }");
+        images.put("https://i.imgur.com/Wl2D0h0.png", ThemeBackgroundTest.png(1200, 675));
+        try (var controller = appearance()) {
+            View screen = open(decor()).getWindow().getDecorView();
+            ListView list = first(screen, ListView.class);
+            tap(list, 0);
+            idle();
+            // missing.js isn't there (a 404), which only means it names no image, and the script's image wins over user.css.
+            assertEquals("https://i.imgur.com/Wl2D0h0.png", requested.get(requested.size() - 1));
+            assertFalse(requested.contains(Marketplace.resolve("u.css", REPO_A, "main")));
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            assertEquals("Aurora (dark)", ThemeState.load(controller.get()).label);
+            assertTrue(ThemeBackground.hasImage(controller.get()));
+
+            tap(list, 1);
+            idle();
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            assertEquals("Borealis (dark)", ThemeState.load(controller.get()).label);
+            assertFalse(ThemeBackground.hasImage(controller.get()));
+        }
+    }
+
+    @Test @Config(shadows = Patched.class) @GraphicsMode(GraphicsMode.Mode.NATIVE) // Android's own decoder, which reads an image's real size
+    public void aDataUriImageIsSavedOnlyWhenItIsAtLeast480PxOnEachSide() throws IOException {
+        putTwoThemes();
+        byte[] png = ThemeBackgroundTest.png(480, 480);
+        responses.put(Marketplace.resolve("u.css", REPO_A, "main"),
+                "body { background: url(" + dataUri(ThemeBackgroundTest.png(480, 479)) + "); }");
+        responses.put(Marketplace.resolve("u.css", REPO_B, "main"),
+                ".Root__top-container { background-image: url(\"" + dataUri(png) + "\") !important; }");
+        try (var controller = appearance()) {
+            View screen = open(decor()).getWindow().getDecorView();
+            ListView list = first(screen, ListView.class);
+            tap(list, 0); // a pixel short on one side: a tile, not a background, and nothing to say about it
+            idle();
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            assertFalse(ThemeBackground.hasImage(controller.get()));
+            assertFalse(hasTextContaining(screen, "Couldn't load Aurora's background image"));
+
+            tap(list, 1);
+            idle();
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            // Saved at about screen size: the display's longer side is 470 px here.
+            BitmapFactory.Options saved = savedImage(controller.get());
+            assertEquals(470, saved.outWidth);
+            assertEquals(470, saved.outHeight);
+        }
+    }
+
+    @Test @Config(shadows = Patched.class) @GraphicsMode(GraphicsMode.Mode.NATIVE) // Android's own decoder, which reads an image's real size
+    public void aTextureTileOnTheWindowIsNoBackground() {
+        putTwoThemes();
+        // Spotify Dark's shape: a 70x70 tile in a :root variable, repeated over the top container.
+        responses.put(Marketplace.resolve("u.css", REPO_A, "main"), ":root { --bgDarkness3: url('"
+                + dataUri(ThemeBackgroundTest.png(70, 70)) + "'); }\n.main-view-container, .Root__top-container "
+                + "{ background-image: var(--bgDarkness3)!important; background-repeat: repeat!important; }");
+        try (var controller = appearance()) {
+            // An image from the theme before.
+            assertTrue(ThemeRuntime.select(controller.get(), new ThemeState.Selection(ThemeState.SCHEME, "Galaxy V2 (base)",
+                    Collections.singletonMap("main", 0xFF000000)), ThemeBackgroundTest.png(480, 480)));
+            View screen = open(decor()).getWindow().getDecorView();
+            tap(first(screen, ListView.class), 0);
+            idle();
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            assertEquals("Aurora (dark)", ThemeState.load(controller.get()).label);
+            assertFalse(ThemeBackground.hasImage(controller.get()));
+            assertFalse(hasTextContaining(screen, "Couldn't load Aurora's background image"));
+        }
+    }
+
+    @Test @Config(shadows = Patched.class) @GraphicsMode(GraphicsMode.Mode.NATIVE) // Android's own decoder, which refuses what isn't an image
+    public void aThemesOwnImageThatFailsAppliesNothing() throws IOException {
+        putTwoThemes();
+        responses.put(Marketplace.manifestUrl(REPO_A), "{\"name\":\"Aurora\",\"description\":\"A vivid theme\","
+                + "\"usercss\":\"u.css\",\"schemes\":\"color.ini\",\"include\":[\"a.js\"]}");
+        String image = "https://i.imgur.com/aurora.jpg";
+        responses.put(Marketplace.resolve("a.js", REPO_A, "main"), "const defImage = \"" + image + "\";");
+        try (var controller = appearance()) {
+            byte[] before = theThemeBefore(controller.get());
+            View screen = open(decor()).getWindow().getDecorView();
+            ListView list = first(screen, ListView.class);
+            tap(list, 0);
+            idle();
+            assertProblem("Couldn't load Aurora's background image: HTTP 500 for " + image);
+
+            images.put(image, "<html>Not Found</html>".getBytes(StandardCharsets.UTF_8));
+            tap(list, 0);
+            idle();
+            assertProblem("Couldn't load Aurora's background image: Not an image Android can read");
+
+            responses.put(Marketplace.resolve("a.js", REPO_A, "main"), "FAIL");
+            tap(list, 0);
+            idle();
+            assertProblem("Couldn't load Aurora's background image: Connection reset");
+
+            responses.put(Marketplace.resolve("u.css", REPO_B, "main"), "RATE");
+            tap(list, 1);
+            idle();
+            assertProblem("Couldn't load Borealis's background image: " + MarketplaceLoader.RATE_LIMITED);
+
+            // The theme in use and its image stay.
+            assertEquals("Before (base)", ThemeState.load(controller.get()).label);
+            assertArrayEquals(before, Files.readAllBytes(new File(controller.get().getFilesDir(), "spicetify_background").toPath()));
+            assertEquals(View.GONE, restartBar(screen).getVisibility());
+        }
+    }
+
+    @Test @Config(shadows = Patched.class) @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void aMissingImageOrFileOnlyMeansTheThemeHasNoImage() throws IOException {
+        putTwoThemes();
+        responses.put(Marketplace.manifestUrl(REPO_A), "{\"name\":\"Aurora\",\"description\":\"A vivid theme\","
+                + "\"usercss\":\"u.css\",\"schemes\":\"color.ini\",\"include\":[\"gone.js\"]}");
+        responses.put(Marketplace.resolve("u.css", REPO_B, "main"), ".Root { background: url(bg.jpg); }");
+        String image = Marketplace.resolve("bg.jpg", REPO_B, "main");
+        images.put(image, GONE);
+        try (var controller = appearance()) {
+            View screen = open(decor()).getWindow().getDecorView();
+            ListView list = first(screen, ListView.class);
+            // Neither its script nor its user.css is there.
+            theThemeBefore(controller.get());
+            tap(list, 0);
+            idle();
+            assertTrue(requested.contains(Marketplace.resolve("gone.js", REPO_A, "main")));
+            assertEquals(Marketplace.resolve("u.css", REPO_A, "main"), requested.get(requested.size() - 1));
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            assertEquals("Aurora (dark)", ThemeState.load(controller.get()).label);
+            assertFalse(ThemeBackground.hasImage(controller.get()));
+
+            // Its user.css names an image that isn't there.
+            theThemeBefore(controller.get());
+            tap(list, 1);
+            idle();
+            assertEquals(image, requested.get(requested.size() - 1));
+            button(ShadowDialog.getLatestDialog(), "Later").performClick();
+            assertEquals("Borealis (dark)", ThemeState.load(controller.get()).label);
+            assertFalse(ThemeBackground.hasImage(controller.get()));
+            assertFalse(hasTextContaining(screen, "Couldn't load"));
+        }
+    }
+
     /** A theme with an image, applied before the test's. Returns the image saved for it. */
     private static byte[] theThemeBefore(Activity activity) throws IOException {
         byte[] image = ThemeBackgroundTest.png(8, 4);
@@ -1052,6 +1202,10 @@ public class MarketplaceSettingsTest {
     private static void tapGalaxy(ListView list) {
         assertSame(Marketplace.GALAXY_V2, list.getAdapter().getItem(0));
         list.performItemClick(list.getAdapter().getView(0, null, list), 0, 0);
+    }
+
+    private static String dataUri(byte[] png) {
+        return "data:image/png;base64," + Base64.encodeToString(png, Base64.NO_WRAP);
     }
 
     private static byte[] png() {
