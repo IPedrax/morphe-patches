@@ -217,13 +217,16 @@ class VerifySettingsDex {
                             continue;
                         }
                         startup++;
+                        // Server files return early in their track process first; VerifyLibraryDex checks that gate.
                         require(
                                 c.getType().equals("Lcom/spotify/music/SpotifyApplication;")
                                         && m.getName().equals("onCreate")
                                         && m.getParameterTypes().isEmpty()
                                         && m.getReturnType().equals("V")
                                         && !AccessFlags.STATIC.isSet(m.getAccessFlags())
-                                        && n == 0,
+                                        && (n == 0 || (n == 4 && call(code.get(0),
+                                                "Lapp/spicetify/extension/spotify/localserver/ServerProcess;",
+                                                "skipApplication"))),
                                 "Settings startup hook must begin Application.onCreate");
                         require(
                                 i.getOpcode() == Opcode.INVOKE_STATIC_RANGE

@@ -95,6 +95,15 @@ class VerifySettingsDexTest {
         throw new AssertionError();
     }
 
+    static int startup(List<Instruction> c) {
+        for (int n = 0; n < c.size(); n++) {
+            if (VerifySettingsDex.call(c.get(n), P + "PatchSettings;", "initialize")) {
+                return n;
+            }
+        }
+        throw new AssertionError();
+    }
+
     static int label(List<Instruction> c) {
         for (int n = 0; n < c.size(); n++) {
             if (VerifySettingsDex.ref(c.get(n)).equals("spicetify_settings")) {
@@ -144,8 +153,15 @@ class VerifySettingsDexTest {
                             "Landroid/app/Activity;"));
         }
         String app = "Lcom/spotify/music/SpotifyApplication;";
-        reject("missing startup", () -> mutate(app, "onCreate", c -> c.removeFirst()));
-        reject("duplicate startup", () -> mutate(app, "onCreate", c -> c.addFirst(c.getFirst())));
+        // Server files put their track-process gate before the startup hook, so find the hook.
+        reject("missing startup", () -> mutate(app, "onCreate", c -> c.remove(startup(c))));
+        reject("duplicate startup", () -> mutate(app, "onCreate", c -> c.add(startup(c), c.get(startup(c)))));
+        reject("misplaced startup", () -> mutate(app, "onCreate",
+                c -> c.add(startup(c), new ImmutableInstruction10x(Opcode.NOP))));
+        reject("startup after four other instructions", () -> mutate(app, "onCreate", c -> {
+            c.subList(0, startup(c)).clear();
+            for (int n = 0; n < 4; n++) c.addFirst(new ImmutableInstruction10x(Opcode.NOP));
+        }));
         reject(
                 "wrong startup receiver",
                 () ->
@@ -154,14 +170,14 @@ class VerifySettingsDexTest {
                                 "onCreate",
                                 c ->
                                         c.set(
-                                                0,
+                                                startup(c),
                                                 new ImmutableInstruction3rc(
                                                         Opcode.INVOKE_STATIC_RANGE,
                                                         0,
                                                         1,
                                                         (MethodReference)
                                                                 ((ReferenceInstruction)
-                                                                                c.getFirst())
+                                                                                c.get(startup(c)))
                                                                         .getReference()))));
         reject("missing append", () -> mutate("Lp/xlt;", "create", c -> c.remove(append(c))));
         reject(
