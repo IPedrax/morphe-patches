@@ -17,10 +17,18 @@ private var composeTableForExtension: String? = null
 private val themeResourcesPatch = resourcePatch {
     execute {
         val roleMap = loadRoleMap()
-        // Read-only: the colors keep their stock values.
+        // Read-only: the colors keep their stock values; only overlayable.xml changes.
         val colors = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(get("res/values/colors.xml"))
         roleTableForExtension = roleTable(colors, roleMap)
         composeTableForExtension = composeTable(colors, roleMap, loadComposePaths())
+        val overlayable = get("res/values/overlayable.xml")
+        val declaration = overlayableXml(roleMap.values.flatten())
+        if (overlayable.exists()) {
+            val inner = declaration.substringAfter("<resources>\n").substringBefore("</resources>")
+            overlayable.writeText(overlayable.readText().replaceFirst("</resources>", "$inner</resources>"))
+        } else {
+            overlayable.writeText(declaration)
+        }
     }
 }
 

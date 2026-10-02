@@ -7,6 +7,9 @@ import java.util.Properties
 /** The Spotify version whose color resources `theme/<version>.properties` lists. */
 internal const val THEME_TARGET_VERSION = "9.1.80.2221"
 
+/** The overlayable the extension's overlay targets. */
+internal const val THEME_OVERLAYABLE = "SpicetifyTheme"
+
 /** Spicetify color.ini keys used as roles, plus `on-button`, in a fixed order. */
 internal val ROLE_KEYS = listOf(
     "main", "main-elevated", "card", "highlight", "highlight-elevated", "text", "subtext",
@@ -107,4 +110,16 @@ internal fun composeTable(document: Document, roleMap: Map<String, List<String>>
             "$path=$name@%08X".format(stock)
         }
     }
+}
+
+/** `res/values/overlayable.xml` declaring every mapped color overlayable, so Spotify can overlay itself. */
+internal fun overlayableXml(names: Collection<String>): String = buildString {
+    appendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+    appendLine("<resources>")
+    appendLine("    <overlayable name=\"$THEME_OVERLAYABLE\">")
+    appendLine("        <policy type=\"public\">")
+    names.forEach { appendLine("            <item type=\"color\" name=\"$it\" />") }
+    appendLine("        </policy>")
+    appendLine("    </overlayable>")
+    appendLine("</resources>")
 }

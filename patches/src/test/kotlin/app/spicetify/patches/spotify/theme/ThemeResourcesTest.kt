@@ -61,6 +61,15 @@ class ThemeResourcesTest {
         assertTrue(failure.message!!.contains("dark_base_background_press"))
     }
 
+    @Test
+    fun `the overlayable declaration lists every mapped color under one public policy`() {
+        val xml = overlayableXml(listOf("gray_7", "gray_10"))
+        assertTrue("<overlayable name=\"SpicetifyTheme\">" in xml)
+        assertTrue("<policy type=\"public\">" in xml)
+        assertTrue("<item type=\"color\" name=\"gray_7\" />" in xml)
+        assertTrue("<item type=\"color\" name=\"gray_10\" />" in xml)
+    }
+
     /** Every mapped color. The alias and the translucent colors carry their 9.1.80.2221 stock values; the rest are opaque. */
     private fun fixture(): String {
         val stock = mapOf(

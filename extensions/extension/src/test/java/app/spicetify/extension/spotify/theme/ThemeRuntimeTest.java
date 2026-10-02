@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.app.Application;
 import android.content.Context;
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -71,6 +72,7 @@ public class ThemeRuntimeTest {
         ComposeTheme.tables = ComposeTheme.parse("a.a=base@FF121212");
         ThemeRuntime.install(context);
 
+        // Android 11 has none of the overlay's classes: touching it throws an Error, which nothing here catches.
         assertTrue(ThemeRuntime.select(context, ThemeState.Selection.preset(ThemePresets.OLED, "OLED")));
 
         assertEquals(ThemePresets.OLED, ThemeState.load(context).kind);
@@ -116,6 +118,7 @@ public class ThemeRuntimeTest {
     }
 
     @Test
+    @Config(sdk = 35)
     public void aFailedSelectionIsNotSaved() {
         ThemeRuntime.install(context);
         // Unpatched, the extension has no role table, so no theme can take effect.
@@ -160,5 +163,14 @@ public class ThemeRuntimeTest {
         ThemeRuntime.install(context);
         assertEquals(0xFF0B1026, ThemeRuntime.color("main", 0xFF121212));
         assertTrue(ThemeRuntime.select(context, ThemeState.Selection.preset(ThemePresets.STOCK, "Spotify")));
+    }
+
+    @Test
+    @Config(sdk = 35)
+    public void onAndroid14TheOverlayReplacesATableFromBeforeTheUpdate() throws IOException {
+        File table = new File(context.getNoBackupFilesDir(), "spicetify_theme.arsc");
+        assertTrue(table.createNewFile());
+        ThemeRuntime.install(context);
+        assertFalse(table.exists());
     }
 }

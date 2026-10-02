@@ -4,6 +4,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.res.Resources;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,9 +20,17 @@ public final class ThemeRuntime {
 
     private ThemeRuntime() {}
 
-    /** Themes need Android 11, which can lay more resources over Spotify's with a {@link ThemeTable}. */
+    /**
+     * Themes need Android 11, which can lay more resources over Spotify's: an overlay Spotify registers
+     * for itself from Android 14 ({@link ThemeOverlay}), a {@link ThemeTable} before it.
+     */
     public static boolean supported() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R;
+    }
+
+    /** The overlay needs Android 14 and a system overlay manager; the table stands in elsewhere. */
+    private static boolean overlay(Context context) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && ThemeOverlay.isAvailable(context);
     }
 
     /** Injection point, from PatchSettings.initialize in SpotifyApplication.onCreate. */
@@ -30,10 +39,14 @@ public final class ThemeRuntime {
             ThemeState.migrate(context);
             if (!supported()) return;
             Application application = (Application) context.getApplicationContext();
-            ThemeTable.applyTo(application.getResources());
-            application.registerActivityLifecycleCallbacks(new Callbacks());
-            // The table follows the installed Spotify's resource IDs, so the saved theme is loaded on
-            // every start. Material You gets the current wallpaper colors this way too.
+            boolean overlay = overlay(application);
+            // A table from before an update to Android 14 has nothing left to do.
+            if (overlay) ThemeTable.delete(application);
+            addLoader(application.getResources(), overlay);
+            application.registerActivityLifecycleCallbacks(new Callbacks(overlay));
+            // Android deletes an app's own overlays when the app is installed again (Morphe found the
+            // same), and the table follows the installed Spotify's resource IDs, so the saved theme is
+            // registered on every start. Material You gets the current wallpaper colors this way too.
             Map<String, Integer> colors = roleColors(application, ThemeState.load(application));
             Map<String, Integer> values = values(colors);
             // Compose reads the values from memory, so at startup it follows the saved theme even if
@@ -89,16 +102,37 @@ public final class ThemeRuntime {
 
     /** Lays a theme's values over Spotify's resources; none restore Spotify's own. */
     private static void load(Context context, Map<String, Integer> values) throws IOException {
-        ThemeTable.load(context, values);
+        if (!overlay(context)) {
+            ThemeTable.load(context, values);
+        } else if (values.isEmpty()) {
+            ThemeOverlay.unregister(context);
+        } else {
+            ThemeOverlay.register(context, values);
+        }
+    }
+
+    /** Adds the overlay's loader, or the table's, to {@code resources}. */
+    private static void addLoader(Resources resources, boolean overlay) {
+        if (overlay) {
+            ThemeOverlay.applyTo(resources);
+        } else {
+            ThemeTable.applyTo(resources);
+        }
     }
 
     /** Loads the theme into each activity's resources before any of its views exist. */
     @TargetApi(Build.VERSION_CODES.Q)
     private static final class Callbacks implements Application.ActivityLifecycleCallbacks {
+        private final boolean overlay;
+
+        Callbacks(boolean overlay) {
+            this.overlay = overlay;
+        }
+
         @Override
         public void onActivityPreCreated(Activity activity, Bundle state) {
             try {
-                ThemeTable.applyTo(activity.getResources());
+                addLoader(activity.getResources(), overlay);
             } catch (RuntimeException e) {
                 Log.w(TAG, "Theme could not be loaded into " + activity.getClass().getName(), e);
             }
