@@ -166,6 +166,14 @@ mutation because an inspected obfuscated class contains that literal. These
 controlled changes test refusal paths, not compatibility with another Spotify release.
 The command never installs an app. Use Java 21 on `PATH` or pass `--java`.
 
+Each pinned class in `patches/src/main/resources/*/*.properties` is checked by
+a digest of what the class does: its flags, members, annotations and code, in a
+fixed order. It isn't a hash of dex bytes, which differ between the dexlib2
+versions that Morphe patcher releases ship (2.x lays type lists out
+differently from 1.x), so one snapshot holds on both.
+`GenerateNativeSettingsAbi --refresh <stock apk> <snapshot files>` recomputes
+the digests after a change to the digest itself.
+
 For a combined settings build, also exercise the settings verifier's mutation
 cases against your private APK:
 
